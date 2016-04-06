@@ -187,20 +187,57 @@ function stanford_r25_block_view($delta = "") {
                 if (!empty($results['index']['R25:LAYOUT_CAPACITY'][0])) {
                     $layout_capacity = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
                 }
+                $layout_instruction = '';
+                if (!empty($results['index']['R25:LAYOUT_INSTRUCTION'][0])) {
+                    $layout_instruction = $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
+                }
+                $layout_features = '';
+                $first_feature = true;
+                if (!empty($results['index']['R25:FEATURE_NAME'][0])) {
+                    foreach ($results['index']['R25:FEATURE_NAME'] as $index) {
+                        if (!$first_feature) $layout_features .= ', ';
+                        $layout_features .= $results['vals'][$index]['value'];
+                        $first_feature = false;
+                    }
+                }
+                $layout_categories = '';
+                $first_category= true;
+                if (!empty($results['index']['R25:CATEGORY_NAME'][0])) {
+                    foreach ($results['index']['R25:CATEGORY_NAME'] as $index) {
+                        if (!$first_category) $layout_categories .= ', ';
+                        $layout_categories .= $results['vals'][$index]['value'];
+                        $first_category = false;
+                    }
+                }
+
                 $photo_id = '';
                 if (!empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
                     $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
                 }
-                $content = '';
+                $content = '<div id="stanford-r25-room-info">';
                 if (!empty($photo_id)) {
-                    $content .= '<div id="stanford-r25-room-photo"><img src="'.variable_get('stanford_r25_base_image_url','') . '/' . $photo_id . '" height="200"></div>';
+                    $content .= '<div id="stanford-r25-room-photo"><img src="'.variable_get('stanford_r25_base_image_url','') . '/' . $photo_id . '"></div>';
+                }
+                $content .= '<div id="stanford-r25-room-detail">';
+                if (!empty($comments)) {
+                    $content .= '<div id="stanford-r25-room-comments">' . $comments . '</div>';
                 }
                 if (!empty($layout_name)) {
-                    $content .= '<div id="stanford-r25-room-layout">Layout: ' . $layout_name . '</div>';
+                    $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $layout_name . '</div>';
                 }
                 if (!empty($layout_capacity)) {
-                    $content .= '<div id="stanford-r25-room-capacity">Capacity: ' . $layout_capacity . '</div>';
+                    $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $layout_capacity . '</div>';
                 }
+                if (!empty($layout_features)) {
+                    $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $layout_features . '</div>';
+                }
+                if (!empty($layout_categories)) {
+                    $content .= '<div id="stanford-r25-room-categories"><b>Categories:</b> ' . $layout_categories . '</div>';
+                }
+                if (!empty($layout_instruction)) {
+                    $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> '.$layout_instruction . '</div>';
+                }
+                $content .= '</div></div>';
                 $block['subject'] = '';
                 $block['content'] = $content;
             }
