@@ -1,0 +1,346 @@
+<?php
+
+define('STANFORD_R25_MENU_PATH', 'admin/config/system/stanford_r25');
+define('STANFORD_R25_ROOM_STATUS_DISABLED', 0);
+define('STANFORD_R25_ROOM_STATUS_READONLY', 1);
+define('STANFORD_R25_ROOM_STATUS_TENTATIVE', 2);
+define('STANFORD_R25_ROOM_STATUS_CONFIRMED', 3);
+
+/**
+ * Implements hook_menu().
+ */
+function stanford_r25_menu()
+{
+  $items = array();
+
+  $items[STANFORD_R25_MENU_PATH] = array(
+      'title' => t('R25 Rooms'),
+      'type' => MENU_NORMAL_ITEM,
+      'description' => t('Manage R25 Room Configurations'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('_stanford_r25_credentials'),
+      'access arguments' => array('administer stanford r25'),
+      'file' => 'stanford_r25.admin.inc',
+  );
+  $items[STANFORD_R25_MENU_PATH . '/credentials'] = array(
+      'title' => t('Credentials'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'access arguments' => array('administer stanford r25'),
+      'weight' => -30,
+  );
+    $items[STANFORD_R25_MENU_PATH . '/config'] = array(
+      'title' => 'Configuration',
+        'type' => MENU_LOCAL_TASK,
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('_stanford_r25_settings'),
+        'access arguments' => array('administer stanford r25'),
+        'file' => 'stanford_r25.admin.inc',
+        'weight' => -20,
+    );
+  $items[STANFORD_R25_MENU_PATH . '/list'] = array(
+    'title' => 'List Rooms',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_list'),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items[STANFORD_R25_MENU_PATH . '/list/add'] = array(
+    'title' => 'Add Room Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_config',5),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items[STANFORD_R25_MENU_PATH . '/%/edit'] = array(
+    'title callback' => '_stanford_r25_room_title',
+    'title arguments' => array(4, 'Edit Room Configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_config', 4),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+  );
+  $items[STANFORD_R25_MENU_PATH . '/%/delete'] = array(
+    'title' => 'Delete Room Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_delete', 4),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+  );
+
+  $items['r25/%/calendar'] = array(
+    'title callback' => '_stanford_r25_room_title',
+    'title arguments' => array(1, 'Room Calendar'),
+    'page callback' => '_stanford_r25_calendar_page',
+    'page arguments' => array(1),
+    'access arguments' => array('view r25 room calendars'),
+    'file' => 'stanford_r25.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+    $items['r25/%/r25_feed'] = array(
+        'title' => 'R25 Feed',
+        'page callback' => '_stanford_r25_feed',
+        'page arguments' => array(1),
+        'access arguments' => array('view r25 room calendars'),
+        'type' => MENU_CALLBACK,
+        'file' => 'stanford_r25.feed.inc',
+    );
+  return $items;
+}
+
+/**
+ * Implements hook_permission()
+ */
+function stanford_r25_permission()
+{
+    return array(
+        'administer stanford r25' => array(
+            'title' => t('Administer Stanford R25 settings'),
+            'description' => 'Change Stanford R25 room settings.',
+        ),
+        'view r25 room calendars' => array(
+            'title' => t('View R25 Room Calendars'),
+            'description' => 'View R25 room calendars created by 25Live Publisher.',
+        ),
+        'book r25 rooms' => array(
+            'title' => t('Book R25 Rooms'),
+            'description' => 'Book rooms in the R25 database from the 25Live Publisher calendar.',
+        ),
+    );
+}
+
+function stanford_r25_block_info() {
+    $blocks = array();
+    $blocks['stanford_r25_reserve'] = array(
+        'info' => t('R25 Room Reservation Form'),
+        'cache' => DRUPAL_NO_CACHE,
+        'visibility' => BLOCK_VISIBILITY_LISTED,
+        'pages'=>'r25/*/calendar',
+    );
+    $blocks['stanford_r25_room_info'] = array(
+        'info' => t('R25 Room Information'),
+        'cache' => DRUPAL_CACHE_PER_PAGE,
+        'visibility' => BLOCK_VISIBILITY_LISTED,
+        'pages' => 'r25/*/calendar',
+    );
+    return $blocks;
+}
+
+function stanford_r25_block_view($delta = "") {
+    $block = array();
+    $room_id = null;
+    $room_status = STANFORD_R25_ROOM_STATUS_DISABLED;
+    $rooms = _stanford_r25_room_config_load();
+    $url = explode("/", current_path());
+    if (count($url) > 2 && $url[count($url) - 3] === "r25" && $url[count($url) - 1] == "calendar") {
+        $room_id = $url[count($url) - 2];
+        if (!empty($rooms[$room_id]['status'])) {
+            $room_status = intval($rooms[$room_id]['status']);
+        }
+    }
+    if ($delta == 'stanford_r25_reserve' && !empty($room_id)) {
+        if ($room_status == STANFORD_R25_ROOM_STATUS_READONLY) {
+            $readonly = variable_get('stanford_r25_readonly_msg', '');
+            if (!empty($readonly)) {
+                $block['subject'] = '';
+                $block['content'] = check_markup($readonly);
+            }
+        } else if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
+            if (user_access('book r25 rooms')) {
+                $capacity = (empty($rooms[$room_id]['capacity'])) ? 5 : $rooms[$room_id]['capacity'];
+                $form = drupal_get_form("_stanford_r25_reservation", $room_id, $capacity);
+                $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
+                $block['content'] = drupal_render($form);
+            } else {
+                if (user_is_logged_in()) {
+                    $no_access = variable_get('stanford_r25_notpermitted_msg', '');
+                    if (!empty($no_access)) {
+                        $block['subject'] = '';
+                        $block['content'] = check_markup($no_access);
+                    }
+                } else {
+                    $login_msg = variable_get('stanford_r25_login_msg', '');
+                    $login_uri = variable_get('stanford_r25_login_uri', '');
+                    if (!empty($login_msg) && !empty($login_uri)) {
+                        $block['subject'] = '';
+                        $block['content'] = l($login_msg, $login_uri, array('query' => array('destination' => current_path())));
+                    }
+                }
+            }
+        }
+    } else if ($delta == 'stanford_r25_room_info' && !empty($room_id)) {
+        if (!empty($rooms[$room_id]['space_id'])) {
+            $results = _stanford_r25_api_call('roominfo', null, null, $rooms[$room_id]['space_id']);
+            if ($results) {
+                $comments = '';
+                if (!empty($results['index']['R25:COMMENTS'][0])) {
+                    $comments = $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
+                }
+                $layout_name = '';
+                if (!empty($results['index']['R25:LAYOUT_NAME'][0])) {
+                    $layout_name = $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
+                }
+                $layout_capacity = '';
+                if (!empty($results['index']['R25:LAYOUT_CAPACITY'][0])) {
+                    $layout_capacity = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
+                }
+                $photo_id = '';
+                if (!empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
+                    $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
+                }
+                $content = '';
+                if (!empty($photo_id)) {
+                    $content .= '<div id="stanford-r25-room-photo"><img src="'.variable_get('stanford_r25_base_image_url','') . '/' . $photo_id . '" height="200"></div>';
+                }
+                if (!empty($layout_name)) {
+                    $content .= '<div id="stanford-r25-room-layout">Layout: ' . $layout_name . '</div>';
+                }
+                if (!empty($layout_capacity)) {
+                    $content .= '<div id="stanford-r25-room-capacity">Capacity: ' . $layout_capacity . '</div>';
+                }
+                $block['subject'] = '';
+                $block['content'] = $content;
+            }
+        }
+    }
+    return $block;
+}
+
+function _stanford_r25_room_config_load() {
+    return variable_get('stanford_r25_rooms',array());
+}
+
+function _stanford_r25_room_config_exists($config) {
+    $rooms = _stanford_r25_room_config_load();
+    return isset($rooms[$config]);
+}
+
+function _stanford_r25_room_config_save($fields) {
+    if (!empty($fields['machine_name'])) {
+        $rooms = _stanford_r25_room_config_load();
+        $machine_name = $fields['machine_name'];
+        foreach($fields as $key => $value) {
+            $rooms[$machine_name][$key] = $value;
+        }
+        variable_set('stanford_r25_rooms',$rooms);
+    }
+}
+
+function _stanford_r25_room_config_delete_room($name) {
+    $rooms = _stanford_r25_room_config_load();
+    if (array_key_exists($name,$rooms)) {
+        unset($rooms[$name]);
+        variable_set('stanford_r25_rooms',$rooms);
+    }
+}
+
+function _stanford_r25_room_title($config = null, $default_title = '') {
+    $rooms = _stanford_r25_room_config_load();
+    $room = $default_title;
+    if (!empty($config) && isset($rooms[$config]['display_name'])) {
+        $room = $rooms[$config]['display_name'];
+    }
+    return $room;
+}
+
+function stanford_r25_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+    switch($root_path){
+        case STANFORD_R25_MENU_PATH . '/list':
+            $item = menu_get_item(STANFORD_R25_MENU_PATH . '/list/add');
+            if ($item['access']) {
+                $data['actions']['output'][] = array(
+                    '#theme' => 'menu_local_action',
+                    '#link' => $item,
+                );
+            }
+            break;
+    }
+}
+
+function _stanford_r25_api_call($command = null, $url = null, $credential = null, $post_data = null)
+{
+
+    if (!isset($credential)) {
+        $credential = decrypt(variable_get('stanford_r25_credential', ''));
+    }
+
+    if (!isset($url)) {
+        $url = variable_get('stanford_r25_base_url', '');
+    }
+    if (empty($url)) return false;
+
+    switch ($command) {
+        case 'reserve':
+            $xml_command = 'events.xml';
+            break;
+        case 'roominfo':
+            $xml_command = 'space.xml?space_id='.$post_data;
+            break;
+        case 'feed':
+            $xml_command = 'reservations.xml?'.$post_data;
+            break;
+        case 'delete':
+            $xml_command = 'event.xml?event_id='.$post_data;
+            break;
+        default:
+            $xml_command = 'null.xml';
+    }
+
+    $url = rtrim($url, '/') . '/' . $xml_command;
+
+    // create a curl session to get the workgroup data
+    $ch = curl_init();
+
+    $options = array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_USERAGENT => 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)',
+        CURLOPT_USERPWD => $credential,
+        CURLOPT_URL => $url,
+        CURLOPT_HTTPHEADER => array('Content-Type: text/xml'),
+    );
+    curl_setopt_array($ch, $options);
+    if ($command == 'reserve') {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "$post_data");
+    } else if ($command == 'delete') {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+    }
+
+    $output = curl_exec($ch);
+
+    $result = false;
+    if ($output === false) {
+        // if $output is false, report a curl error
+        $curl_error = 'Curl Error: ' . curl_error($ch);
+        watchdog('stanford_r25', $curl_error);
+    } else {
+        // if we have output, parse it and create an array to return
+        // parse the xml
+        $p = xml_parser_create();
+        $vals = array();
+        $index = array();
+        xml_parse_into_struct($p, $output, $vals, $index);
+        xml_parser_free($p);
+        if ($xml_command == 'null.xml' && !empty($vals[0]['tag']) && $vals[0]['tag'] === 'R25:NULL') {
+          $result = true;
+        } else { // if ($xml_command == 'events.xml') {
+          $result = array('vals'=>$vals,'index'=>$index);
+        }
+    }
+    curl_close($ch);
+    return $result;
+}
+
+function stanford_r25_form_alter(&$form, &$form_state, $form_id) {
+    if ($form_id == '_stanford_r25_reservation') {
+        $xyz = 1;
+    }
+}
+
+function stanford_r25_mail($key, &$message, $params) {
+    $message['subject'] = $params['subject'];
+    $message['body'] = $params['body'];
+}

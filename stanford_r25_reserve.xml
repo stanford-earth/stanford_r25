@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<r25:events xmlns:r25="http://www.collegenet.com/r25" xmlns:xl="http://www.w3.org/1999/xlink" pubdate="2013-04-29T12:54:30-08:00">
+  <r25:event id="" status="new">
+    <r25:event_name>[r25_event_name]</r25:event_name>
+    <r25:node_type>E</r25:node_type>
+    <r25:parent_id>[r25_parent_id]</r25:parent_id>
+    <r25:event_type_id>[r25_event_type]</r25:event_type_id>
+    <r25:state>[r25_event_state]</r25:state>
+    <r25:organization id="" status="new">
+      <r25:organization_id>[r25_organization_id]</r25:organization_id>
+      <r25:primary>T</r25:primary>
+    </r25:organization>
+    <r25:profile id="" status="new">
+      <r25:profile_name/>
+      <r25:profile_code/>
+      <r25:profile_description/>
+      <r25:prof_use>1</r25:prof_use>
+      <r25:prof_use_name/>
+      <r25:rec_type_id>0</r25:rec_type_id>
+      <r25:expected_count>[r25_expected_headcount]</r25:expected_count>
+      <r25:registered_count/>
+      <r25:profile_comments/>
+      <r25:init_start_dt>[r25_start_date_time]</r25:init_start_dt>
+      <r25:init_end_dt>[r25_end_date_time]</r25:init_end_dt>
+      <r25:reservation id="" status="new">
+        <r25:reservation_state>1</r25:reservation_state>
+        <r25:space_reservation id="" status="new">
+        <r25:space_id>[r25_space_id]</r25:space_id>
+        </r25:space_reservation>
+      </r25:reservation>
+    </r25:profile>
+    <r25:event_text id="" status="new">
+      <r25:text_type_id>1</r25:text_type_id>
+      <r25:text_type_name></r25:text_type_name>
+      <r25:text>[r25_created_by]</r25:text>
+    </r25:event_text>
+      <r25:event_text id="" status="new">
+          <r25:text_type_id>2</r25:text_type_id>
+          <r25:text_type_name></r25:text_type_name>
+          <r25:text>Internal note number one (auto)</r25:text>
+      </r25:event_text>
+      <r25:event_text id="" status="new">
+          <r25:text_type_id>2</r25:text_type_id>
+          <r25:text_type_name></r25:text_type_name>
+          <r25:text>Internal note number two (auto)</r25:text>
+      </r25:event_text>
+  </r25:event>
+</r25:events>

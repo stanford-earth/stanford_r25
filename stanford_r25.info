@@ -1,0 +1,7 @@
+name = R25 Room Reservations
+description = Interface for room reservations for 25Live/R25
+core = 7.x
+package = Stanford
+project = stanford_r25
+dependencies[] = encrypt
+version = 1.00
