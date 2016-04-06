@@ -26,14 +26,11 @@
 }
 
 #stanford-r25-room-info {
-    display: block;
+    display: none;
 }
 
 #stanford-r25-room-photo {
     float: left;
     width: 150px;
     padding-right: 15px;
-}
-
-#stanford-r25-room-detail {
 }
