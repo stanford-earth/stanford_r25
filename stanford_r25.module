@@ -175,21 +175,18 @@ function stanford_r25_block_view($delta = "") {
         if (!empty($rooms[$room_id]['space_id'])) {
             $results = _stanford_r25_api_call('roominfo', null, null, $rooms[$room_id]['space_id']);
             if ($results) {
-                $comments = '';
+                $room_info = array();
                 if (!empty($results['index']['R25:COMMENTS'][0])) {
-                    $comments = $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
+                    $room_info['comments'] = $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
                 }
-                $layout_name = '';
                 if (!empty($results['index']['R25:LAYOUT_NAME'][0])) {
-                    $layout_name = $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
+                    $room_info['layout_name'] = $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
                 }
-                $layout_capacity = '';
                 if (!empty($results['index']['R25:LAYOUT_CAPACITY'][0])) {
-                    $layout_capacity = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
+                    $room_info['layout_capacity'] = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
                 }
-                $layout_instruction = '';
                 if (!empty($results['index']['R25:LAYOUT_INSTRUCTION'][0])) {
-                    $layout_instruction = $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
+                    $room_info['layout_instruction'] = $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
                 }
                 $layout_features = '';
                 $first_feature = true;
@@ -200,6 +197,7 @@ function stanford_r25_block_view($delta = "") {
                         $first_feature = false;
                     }
                 }
+                if (!empty($layout_features)) $room_info['layout_features'] = $layout_features;
                 $layout_categories = '';
                 $first_category= true;
                 if (!empty($results['index']['R25:CATEGORY_NAME'][0])) {
@@ -209,39 +207,13 @@ function stanford_r25_block_view($delta = "") {
                         $first_category = false;
                     }
                 }
-
-                $photo_id = '';
+                if (!empty($layout_categories)) $room_info['layout_categories'] = $layout_categories;
                 if (!empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
-                    $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
+                    $room_info['photo_id'] = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
                 }
-
-                $content = '<a href="#" id ="stanford-r25-room-show">Show Room Info</a><div id="stanford-r25-room-info">';
-                $content .= '<a href="#" id="stanford-r25-room-hide">Hide Room Info</a>';
-                if (!empty($photo_id)) {
-                    $content .= '<div id="stanford-r25-room-photo"><img src="'.variable_get('stanford_r25_base_image_url','') . '/' . $photo_id . '"></div>';
-                }
-                $content .= '<div id="stanford-r25-room-detail">';
-                if (!empty($comments)) {
-                    $content .= '<div id="stanford-r25-room-comments">' . $comments . '</div>';
-                }
-                if (!empty($layout_name)) {
-                    $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $layout_name . '</div>';
-                }
-                if (!empty($layout_capacity)) {
-                    $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $layout_capacity . '</div>';
-                }
-                if (!empty($layout_features)) {
-                    $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $layout_features . '</div>';
-                }
-                if (!empty($layout_categories)) {
-                    $content .= '<div id="stanford-r25-room-categories"><b>Categories:</b> ' . $layout_categories . '</div>';
-                }
-                if (!empty($layout_instruction)) {
-                    $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> '.$layout_instruction . '</div>';
-                }
-                $content .= '</div></div>';
+                $form = drupal_get_form("_stanford_r25_room_info_form", $room_info);
                 $block['subject'] = '';
-                $block['content'] = $content;
+                $block['content'] = drupal_render($form);
             }
         }
     }

@@ -25,8 +25,12 @@
     color: #333;
 }
 
-#stanford-r25-room-info {
-    display: none;
+#block-stanford-r25-stanford-r25-room-info {
+    margin-bottom: 0px;
+}
+
+#-stanford-r25-room-info-form {
+    margin-bottom: 10px;
 }
 
 #stanford-r25-room-photo {
