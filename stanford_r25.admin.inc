@@ -223,7 +223,6 @@ function _stanford_r25_room_list() {
   $rooms = _stanford_r25_room_config_load();
   //$rooms = variable_get('stanford_r25_rooms',array());
   $header = array(
-    t('Machine Name'),
     t('Display Name'),
       t('Calendar Type'),
     t('25Live Publisher Webname'),
@@ -237,8 +236,8 @@ function _stanford_r25_room_list() {
 
   foreach ($rooms as $key => $config) {
     $row = array();
-    $row[] = array('data' => l($key, '/r25/'.$key.'/calendar'));
-    $row[] = array('data' => $config['display_name']);
+    //$row[] = array('data' => l($key, '/r25/'.$key.'/calendar'));
+    $row[] = array('data' => l($config['display_name'], '/r25/'.$key.'/calendar'));
       switch (intval($config['caltype'])) {
           case 1: $caltype = t('25Live Publisher'); break;
           case 2: $caltype = t('FullCalendar'); break;
@@ -284,7 +283,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     }
   }
   if (empty($config)) {
-    $config = array('machine_name'=> '', 'display_name'=>'', 'caltype'=>1, 'spud_name'=>'', 'space_id'=>'',
+    $config = array('machine_name'=> '', 'display_name'=>'', 'caltype'=>2, 'spud_name'=>'', 'space_id'=>'',
         'email_list'=>'', 'created' => format_date(time()), 'status'=>1, 'capacity'=>5);
   }
   $form['display_name'] = array(
