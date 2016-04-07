@@ -345,12 +345,6 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
     return $result;
 }
 
-function stanford_r25_form_alter(&$form, &$form_state, $form_id) {
-    if ($form_id == '_stanford_r25_reservation') {
-        $xyz = 1;
-    }
-}
-
 function stanford_r25_mail($key, &$message, $params) {
     $message['subject'] = $params['subject'];
     $message['body'] = $params['body'];

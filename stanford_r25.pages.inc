@@ -6,7 +6,7 @@ function _stanford_r25_calendar_page($room = null)
     $output = array();
     if (!empty($room) && isset($rooms[$room]['status'])) {
         $status = intval($rooms[$room]['status']);
-        if ($status > 0) {
+        if ($status > STANFORD_R25_ROOM_STATUS_DISABLED) {
             drupal_add_js(array('stanfordR25Room' => $room), 'setting');
             drupal_add_js(array('stanfordR25Status' => $status), 'setting');
             $can_book =  (user_access('book r25 rooms') ? 1 : 0);
@@ -70,7 +70,7 @@ function _stanford_r25_room_info_form($form, &$form_state, $room_info = '') {
         $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
     }
     if (!empty($room_info['layout_capacity'])) {
-        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . '</div>';
+        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . ' ' . STANFORD_R25_MENU_PATH .  '</div>';
     }
     if (!empty($room_info['layout_features'])) {
         $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features']. '</div>';
@@ -97,7 +97,7 @@ function _stanford_r25_reservation($form, &$form_state, $room = '', $max_headcou
         '#value' => $room,
     );
     $rooms = _stanford_r25_room_config_load();
-    if (!empty($rooms[$room]['status']) && intval($rooms[$room]['status']) == 2) {
+    if (!empty($rooms[$room]['status']) && intval($rooms[$room]['status']) == STANFORD_R25_ROOM_STATUS_TENTATIVE) {
         $form['stanford_r25_booking_tentative'] = array(
             '#type'=>'markup',
             '#markup'=>"<p>This room only accepts tentative reservations which must be approved by the room's administrator.</p>",
@@ -206,7 +206,7 @@ function _stanford_r25_reservation_submit($form, &$form_state)
         return;
     }
     $event_state = intval($form_state['storage']['stanford_r25_booking']['room']['status']);
-    if ($event_state < 2 || $event_state > 3) {
+    if ($event_state < STANFORD_R25_ROOM_STATUS_TENTATIVE || $event_state > STANFORD_R25_ROOM_STATUS_CONFIRMED) {
         drupal_set_message('This room may not be reserved through this website.', 'error');
         unset($form_state['storage']['stanford_r25_booking']);
         return;

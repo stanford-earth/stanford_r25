@@ -20,16 +20,6 @@ var qtip = false;
       if (parseInt(stanford_r25_status) > 1 && parseInt(Drupal.settings.stanfordR25Access) == 1) {
           selectable = true;
       }
-      /*
-      $('#stanford-r25-room-show').click(function() {
-          $('#stanford-r25-room-info').show();
-          $(this).hide();
-      });
-      $('#stanford-r25-room-hide').click(function() {
-          $('#stanford-r25-room-show').show();
-          $('#stanford-r25-room-info').hide();
-      });
-      */
       $('#-stanford-r25-reservation').submit(function(event) {
           var view = $('#calendar').fullCalendar('getView');
           document.cookie = "stanford-r25-view="+view.name;
