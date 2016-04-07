@@ -5,4 +5,4 @@ package = Stanford
 project = stanford_r25
 dependencies[] = encrypt
 dependencies[] = libraries
-version = 1.00
+version = 1.01
