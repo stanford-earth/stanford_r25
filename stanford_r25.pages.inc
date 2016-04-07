@@ -51,13 +51,15 @@ function _stanford_r25_calendar_page($room = null)
     }
     return $output;
 }
-function _stanford_r25_room_info_form($form, &$form_state, $room_info = '') {
+function stanford_r25_room_info_form($form, &$form_state, $room_info = '') {
+/*
     $form['stanford_r25_room_set'] = array(
         '#type' => 'fieldset',
         '#title' => t('View Room Info'),
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
     );
+*/
     $content = '<div id="stanford-r25-room-info">';
     if (!empty($room_info['photo_id'])) {
         $content .= '<div id="stanford-r25-room-photo"><img src="'.variable_get('stanford_r25_base_image_url','') . '/' . $room_info['photo_id'] . '"></div>';
@@ -70,7 +72,7 @@ function _stanford_r25_room_info_form($form, &$form_state, $room_info = '') {
         $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
     }
     if (!empty($room_info['layout_capacity'])) {
-        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . ' ' . STANFORD_R25_MENU_PATH .  '</div>';
+        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] .  '</div>';
     }
     if (!empty($room_info['layout_features'])) {
         $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features']. '</div>';
@@ -82,7 +84,8 @@ function _stanford_r25_room_info_form($form, &$form_state, $room_info = '') {
         $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> '.$room_info['layout_instruction'] . '</div>';
     }
     $content .= '</div></div>';
-    $form['stanford_r25_room_set']['room_markup'] = array(
+    //$form['stanford_r25_room_set']['room_markup'] = array(
+    $form['stanford_r25_room_markup'] = array(
         '#type'=> 'markup',
         '#markup' => $content,
     );

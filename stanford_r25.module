@@ -211,7 +211,7 @@ function stanford_r25_block_view($delta = "") {
                 if (!empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
                     $room_info['photo_id'] = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
                 }
-                $form = drupal_get_form("_stanford_r25_room_info_form", $room_info);
+                $form = drupal_get_form("stanford_r25_room_info_form", $room_info);
                 $block['subject'] = '';
                 $block['content'] = drupal_render($form);
             }
