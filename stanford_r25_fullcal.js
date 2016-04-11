@@ -4,6 +4,7 @@ var qtip = false;
 
   $(document).ready(function() {
 
+      $('#edit-stanford-r25-booking-date-datepicker-popup-0').focus();
       var defaultDate = readCookie("stanford-r25-date");
       if (defaultDate === null) defaultDate = new Date();
       deleteCookie("stanford-r25-date");
@@ -76,7 +77,6 @@ var qtip = false;
                   $('body').css("cursor", "progress");
               } else {
                   $('body').css("cursor", "default");
-                  $('#edit-stanford-r25-booking-date-datepicker-popup-0').focus();
               }
           },
           select: function(start, end) {
