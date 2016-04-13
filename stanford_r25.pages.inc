@@ -235,7 +235,8 @@ function _stanford_r25_reservation_submit($form, &$form_state)
         } else {
             $msg_index = $result['index']['R25:MSG_ID'][0];
             if (!empty($result['vals'][$msg_index]['value'])) {
-                if ($result['vals'][$msg_index]['value'] === 'EV_I_SAVE') {
+                if ($result['vals'][$msg_index]['value'] === 'EV_I_SAVE' ||
+                    $result['vals'][$msg_index]['value'] === 'EV_I_CREATED') {
                     $success = true;
                 }
             }
