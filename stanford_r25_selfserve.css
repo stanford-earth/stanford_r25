@@ -1,18 +1,13 @@
-/*
-#-stanford-r25-reservation {width: 100%; display: inline-block; padding: 0; margin: 0;}
-#-stanford-r25-reservation .form-item{float: left; padding-right: 15px;}
-#-stanford-r25-reservation #edit-submit { position: relative; top: 37px;}
-*/
-#-stanford-r25-reservation {
+#stanford-r25-reservation {
     margin-bottom: 0;
 }
 
-#-stanford-r25-reservation .form-item {
+#stanford-r25-reservation .form-item {
     margin-top: 0;
     margin-bottom: 0;
 }
 
-#-stanford-r25-reservation .form-submit {
+#stanford-r25-reservation .form-submit {
     margin-top: 10px;
 }
 
@@ -29,7 +24,7 @@
     margin-bottom: 15px;
 }
 
-#-stanford-r25-room-info-form {
+#stanford-r25-room-info-form {
     margin-bottom: 10px;
 }
 

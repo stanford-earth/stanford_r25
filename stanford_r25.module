@@ -184,7 +184,7 @@ function stanford_r25_block_view($delta = "")
             // with its max capacity. If we don't know its max capacity, set it to 5
             if (user_access('book r25 rooms')) {
                 $capacity = (empty($rooms[$room_id]['capacity'])) ? 5 : $rooms[$room_id]['capacity'];
-                $form = drupal_get_form("_stanford_r25_reservation", $room_id, $capacity);
+                $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity);
                 $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                 $block['content'] = drupal_render($form);
             } else {
