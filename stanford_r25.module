@@ -201,7 +201,7 @@ function stanford_r25_block_view($delta = "")
                     $login_uri = variable_get('stanford_r25_login_uri', '');
                     if (!empty($login_msg) && !empty($login_uri)) {
                         $block['subject'] = '';
-                        $block['content'] = l($login_msg, $login_uri, array('query' => array('destination' => current_path()),
+                        $block['content'] = l($login_msg, $login_uri, array('query' => array('destination' => current_path().'#stanford-r25-reservation'),
                             'attributes' => array('class' => array('btn', 'btn-giving'))));
                     }
                 }
