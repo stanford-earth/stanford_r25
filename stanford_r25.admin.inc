@@ -250,8 +250,7 @@ function _stanford_r25_room_list()
 
     foreach ($rooms as $key => $config) {
         $row = array();
-        //$row[] = array('data' => l($key, '/r25/'.$key.'/calendar'));
-        $row[] = array('data' => l($config['display_name'], '/r25/' . $key . '/calendar',array('fragment' => 'stanford-r25-reservation')));
+        $row[] = array('data' => l($config['display_name'], '/r25/' . $key . '/calendar'));
         switch (intval($config['caltype'])) {
             case 1:
                 $caltype = t('25Live Publisher');

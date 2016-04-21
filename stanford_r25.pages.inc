@@ -322,5 +322,4 @@ function stanford_r25_reservation_submit($form, &$form_state)
     }
     // remove the storage we set up in validate
     unset($form_state['storage']['stanford_r25_booking']);
-    $form_state['redirect'] = url(current_path(),array('fragment' => 'stanford-r25-reservation'));
 }
