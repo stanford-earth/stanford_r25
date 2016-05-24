@@ -32,6 +32,16 @@ var qtip = false;  // assume we don't have the qtip library to start
             selectable = true;
         }
 
+        // get the maximum selectable duration of the room
+        var maxDuration = 0;
+        var dValue = Drupal.settings.stanfordR25MaxHours;
+        if (!isNaN(dValue) && parseInt(Number(dValue)) == dValue &&
+            !isNaN(parseInt(dValue, 10)) && parseInt(dValue, 10) > -1) {
+            maxDuration = parseInt(dValue) * 60;
+        } else {
+            selectable = false;
+        }
+
         // as mentioned above, when the user submits a reservation requests, save the date and calendar view to cookies
         $('#stanford-r25-reservation').submit(function (event) {
             var view = $('#calendar').fullCalendar('getView');
@@ -100,11 +110,17 @@ var qtip = false;  // assume we don't have the qtip library to start
             },
             // when the user clicks and drags to select a date and time, populate the date, time, and duration fields
             // in the reservation form and set the focus to the required headcount field. Also display an error alert
-            // if the user tries to select more than 120 minutes duration
+            // if the user tries to select more than the meximum minutes duration
             select: function (start, end) {
                 var duration = end.diff(start, 'minutes');
-                if (duration > 120) {
-                    alert('Maximum booking duration is 2 hours. For longer please contact a department administrator.');
+                if (maxDuration > 0 && duration > maxDuration) {
+                    var maxStr = '';
+                    if (maxDuration > 120) {
+                        maxStr = (maxDuration / 60) + ' hours';
+                    } else {
+                        maxStr = maxDuration + ' minutes';
+                    }
+                    alert('Maximum booking duration is ' + maxStr + '. For longer please contact a department administrator.');
                 } else {
                     var duration_index = (duration / 30) - 1;
                     $('#edit-stanford-r25-booking-duration').val(duration_index);

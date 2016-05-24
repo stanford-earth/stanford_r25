@@ -87,7 +87,8 @@ On this form you can also:
 * a read-only message to be displayed in lieu of the reservations form for
   rooms that don't allow reservations
 * reservation instructions that should be displayed as part of the reservation
-  form.
+  form. You can use the token [max_duration] to insert the maximum booking duration
+  for each room.
 
 3.3 List Rooms tab
 
@@ -107,6 +108,8 @@ When creating or editing a room, the following information is collected:
   fifteen to twenty minutes. The FullCalendar widget can be used clicked and
   dragged upon to populate the reservation form and is updated immediately
   upon submitting a new reservation.
+* max_hours: the maximum number of hours a reservation for this room can be via 
+  this module.
 * Room Display options: "Disabled" => no calendar view is displayed and new
   events can not be created for this room; "Read Only" => calendar displays
   events but new events can not be created from this module; "Tentative

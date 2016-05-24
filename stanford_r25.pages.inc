@@ -7,11 +7,13 @@ function _stanford_r25_calendar_page($room = null)
     $output = array();
     if (!empty($room) && isset($rooms[$room]['status'])) {
         $status = intval($rooms[$room]['status']);
+
         // make sure we have a valid room
         if ($status > STANFORD_R25_ROOM_STATUS_DISABLED) {
             // set some JavaScript variables to be used at the browser
             drupal_add_js(array('stanfordR25Room' => $room), 'setting');
             drupal_add_js(array('stanfordR25Status' => $status), 'setting');
+            drupal_add_js(array('stanfordR25MaxHours' => $rooms[$room]['max_hours']), 'setting');
             $can_book = (user_access('book r25 rooms') ? 1 : 0);
             drupal_add_js(array('stanfordR25Access' => $can_book), 'setting');
             if (intval($rooms[$room]['caltype']) == 1) {
@@ -131,16 +133,35 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#date_year_range' => '-0:+1',
         '#required' => true,
     );
-    // booking duration is limited to 2 hours in 30 minute increments
+    // default booking duration is limited to 2 hours in 30 minute increments
+    // but a room can have a different value
+    $max_hours = 2;
+    if (!empty($rooms[$room]['max_hours'])) {
+        $max_hours = intval($rooms[$room]['max_hours']);
+        if ($max_hours == 0) $max_hours = 24;
+    }
+    $hours_array = array();
+    if ($max_hours > 2) {
+        for ($i = 0; $i < $max_hours; $i++) {
+            $hstr = '';
+            if ($i == 0) {
+                $hours_array[] = '30 minutes';
+                $hours_array[] = '1 hour';
+            } else {
+                $hours_array[] = strval($i) . '.5 hours';
+                $hours_array[] = strval($i+1) . ' hours';
+            }
+        }
+    } else {
+        $hours_array[0] = '30 minutes';
+        $hours_array[1] = '60 minutes';
+        $hours_array[2] = '90 minutes';
+        $hours_array[3] = '120 minutes';
+    }
     $form['stanford_r25_booking_duration'] = array(
         '#type' => 'select',
         '#title' => t('Duration'),
-        '#options' => array(
-            0 => t('30 minutes'),
-            1 => t('60 minutes'),
-            2 => t('90 minutes'),
-            3 => t('120 minutes'),
-        ),
+        '#options' => $hours_array,
         '#default_value' => 0,
         '#required' => true,
     );
@@ -167,9 +188,10 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#value' => t('Reserve'),
     );
     // display some reservation instructions if available
+    $booking_instr = str_replace('[max_duration]',$max_hours,variable_get('stanford_r25_booking_instructions',''));
     $form['r25_instructions'] = array(
         '#type' => 'markup',
-        '#markup' => check_markup(variable_get('stanford_r25_booking_instructions', '')),
+        '#markup' => check_markup($booking_instr),
     );
 
     return $form;
@@ -289,7 +311,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
         // send an email about the booking if mail list is set
         $mail_list = $form_state['storage']['stanford_r25_booking']['room']['email_list'];
         $body = array();
-        $body[] = "A " . $result['vals'][$result['index']['R25:STATE_NAME'][0]]['value'] . "reservation has been made";
+        $body[] = "A " . $result['vals'][$result['index']['R25:STATE_NAME'][0]]['value'] . " reservation has been made";
         $subject = '';
         if ($state == 1) {
             // this is the email for a tentative booking
@@ -307,7 +329,11 @@ function stanford_r25_reservation_submit($form, &$form_state)
         $body[] = "Room: " . $form_state['storage']['stanford_r25_booking']['room']['display_name'];
         $body[] = "Date: " . $date->format("l, F j, Y g:i a");
         $duration = (intval($form_state['values']['stanford_r25_booking_duration']) * 30) + 30;
-        $body[] = "Duration: " . $duration . ' minutes';
+        if ($duration > 120) {
+            $body[] = 'Duration: ' . $duration/60 . ' hours';
+        } else {
+            $body[] = 'Duration: ' . $duration . ' minutes';
+        }
         $body[] = "Reason: " . $form_state['values']['stanford_r25_booking_reason'];
         $body[] = "Requested by: " . $user->name . " " . $user->mail;
         $params = array('body' => $body,
