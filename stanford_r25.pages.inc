@@ -200,7 +200,7 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
 
 // some date and time formatting stuff - taking input from form date/time and duration fields
 // and returning start and end times in W3C format to pass to the 25Live web services api.
-function _stanford_r25_format_date_and_time($booking_date, $booking_duration)
+function _stanford_r25_format_date_and_time($booking_date, $booking_duration, $max_hours)
 {
     $date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
     $date_errors = DateTime::getLastErrors();
@@ -208,7 +208,7 @@ function _stanford_r25_format_date_and_time($booking_date, $booking_duration)
         return false;
     }
     $duration = intval($booking_duration);
-    if ($duration < 0 || $duration > 3) return false;
+    if ($duration < 0 || $duration > (($max_hours*2)-1)) return false;
     $duration = ($duration * 30) + 30;
     return array('day' => $date->format('Y-m-d'), 'start' => $date->format(DateTime::W3C),
         'end' => $date->add(new DateInterval('PT' . $duration . 'M'))->format(DateTime::W3C));
@@ -229,7 +229,7 @@ function stanford_r25_reservation_validate($form, &$form_state)
         $booking_info['room'] = $rooms[$form_state['input']['stanford_r25_booking_roomid']];
     }
     $date_strs = _stanford_r25_format_date_and_time($form_state['input']['stanford_r25_booking_date'],
-        $form_state['input']['stanford_r25_booking_duration']);
+        $form_state['input']['stanford_r25_booking_duration'],$booking_info['room']['max_hours']);
     if ($date_strs === false) {
         form_set_error('stanford_r25_booking_time', 'Invalid date and time or duration submitted.');
     } else {
