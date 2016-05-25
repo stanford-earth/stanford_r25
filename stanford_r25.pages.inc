@@ -259,9 +259,14 @@ function stanford_r25_reservation_submit($form, &$form_state)
         return;
     }
 
+    $xml_file = '/stanford_r25_reserve.xml';
+    if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE && intval($form_state['storage']['stanford_r25_booking']['room']['approver_id']) > 0) {
+        $xml_file = '/stanford_r25_reserve_todo.xml';
+    }
+
     // get the XML template for creating an event and replace tokens with data for this reservation
     $event_state = $event_state - 1;
-    $xml = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve.xml');
+    $xml = file_get_contents(drupal_get_path('module', 'stanford_r25') . $xml_file); //'/stanford_r25_reserve.xml');
     $xml = str_replace('[r25_event_name]', $form_state['values']['stanford_r25_booking_reason'], $xml);
     $xml = str_replace('[r25_parent_id]', variable_get('stanford_r25_parent_event_id', 'unknown'), $xml);
     $xml = str_replace('[r25_event_type]', variable_get('stanford_r25_event_type', 'unknown'), $xml);
@@ -271,6 +276,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
     $xml = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $xml);
     $xml = str_replace('[r25_end_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['end'], $xml);
     $xml = str_replace('[r25_space_id]', $form_state['storage']['stanford_r25_booking']['room']['space_id'], $xml);
+    $xml = str_replace('[r25_approver_id]', $form_state['storage']['stanford_r25_booking']['room']['approver_id'],$xml);
     global $user;
     $xml = str_replace('[r25_created_by]', '<p>Self service reservation made by ' . $user->name . ' - <a href="mailto:' . $user->mail . '">click to contact</a></p>', $xml);
 

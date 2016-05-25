@@ -245,6 +245,7 @@ function _stanford_r25_room_list()
         t('Email Requests'),
         t('Created'),
         t('Status'),
+        t('Approver ID'),
         array('data' => t('Operations'), 'colspan' => '3'),
     );
     $rows = array();
@@ -283,7 +284,7 @@ function _stanford_r25_room_list()
                 $status = t('Disabled');
         }
         $row[] = array('data' => $status);
-
+        $row[] = array('data' => $config['approver_id']);
         // Set the edit column.
         $row[] = array('data' => l(t('edit'), STANFORD_R25_MENU_PATH . '/' . $key . '/edit'));
 
@@ -314,7 +315,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     }
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
-            'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2);
+            'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2,
+            'approver_id' => '');
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -356,6 +358,14 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#size' => 30,
         '#default_value' => $config['max_hours'],
         '#description' => t('The maximum number of hours for a reservation via this interface. Set to 0 for no limit.'),
+    );
+    $form['approver_id'] = array(
+        '#title' => t('25Live User ID# of Approver'),
+        '#type' => 'textfield',
+        '#required' => false,
+        '#size' => 30,
+        '#default_value' => $config['approver_id'],
+        '#description' => t('Optional 25Live Contact ID of person who will approve reservations for this room. If set, new reservations will create approval task for this user in 25Live.'),
     );
     $form['spud_name'] = array(
         '#title' => t('25Live Publisher Webname'),
@@ -431,6 +441,12 @@ function _stanford_r25_room_config_validate($form, &$form_state)
     if (!is_numeric($max_hours) || intval($max_hours) != $max_hours || $max_hours < 0) {
         form_set_error('max_hours', 'Maximum Reservation (Hours) must be zero or a positive integer.');
     }
+    if (!empty($form_state['values']['approver_id'])) {
+        $approver_id = $form_state['values']['approver_id'];
+        if (!is_numeric($approver_id) || intval($approver_id) != $approver_id || $approver_id < 0) {
+            form_set_error('approver_id', 'Approver ID must be blank, zero, or a positive integer.');
+        }
+    }
 }
 
 // save the room configuation
@@ -447,6 +463,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'caltype' => (int)$form_state['values']['caltype'],
         'capacity' => (int)$form_state['values']['capacity'],
         'max_hours' => (int)$form_state['values']['max_hours'],
+        'approver_id' => (int)$form_state['values']['approver_id'],
     );
     // try and get room capacity from the webservices api
     if (!empty($form_state['values']['space_id'])) {
