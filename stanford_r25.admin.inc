@@ -121,6 +121,19 @@ function _stanford_r25_credentials_submit($form, &$form_state)
         variable_set('stanford_r25_base_image_url', $form_state['values']['stanford_r25_base_image_url']);
     }
     drupal_set_message(t('Credentials saved.'));
+
+    // get the 25Live account id# for this credential to use if setting todo's.
+    $contact_id = false;
+    $results = _stanford_r25_api_call('acctinfo');
+    if ($results) {
+        if (!empty($results['index']['R25:CONTACT_ID'][0])) {
+            $contact_id = $results['vals'][$results['index']['R25:CONTACT_ID'][0]]['value'];
+        }
+    }
+    if (!$contact_id) {
+        drupal_set_message(t('Unable to retrieve R25 Contact ID# for credential. Tentative Reservations will not create approval to-dos.'));
+    }
+    variable_set('stanford_r25_credential_contact_id',$contact_id);
 }
 
 // another standard drupal administration form for organization codes and error responses, etc.

@@ -40,10 +40,10 @@
       <r25:todo_type>2</r25:todo_type>
       <r25:todo_priority_id>10</r25:todo_priority_id>
       <r25:due_dt>[r25_start_date_time]</r25:due_dt>
-      <r25:cur_assigned_to_id>[r25_approver_id]</r25:cur_assigned_to_id>
-      <r25:cur_assigned_by_id>20727</r25:cur_assigned_by_id>
       <r25:object_type>1</r25:object_type>
       <r25:read>T</r25:read>
+      <r25:cur_assigned_to_id>[r25_approver_id]</r25:cur_assigned_to_id> 
+      <r25:cur_assigned_by_id>[r25_credential_id]</r25:cur_assigned_by_id> 
     </r25:todo>
   </r25:event>
 </r25:events>

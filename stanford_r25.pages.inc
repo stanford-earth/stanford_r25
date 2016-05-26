@@ -277,6 +277,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
     $xml = str_replace('[r25_end_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['end'], $xml);
     $xml = str_replace('[r25_space_id]', $form_state['storage']['stanford_r25_booking']['room']['space_id'], $xml);
     $xml = str_replace('[r25_approver_id]', $form_state['storage']['stanford_r25_booking']['room']['approver_id'],$xml);
+    $xml = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $xml);
     global $user;
     $xml = str_replace('[r25_created_by]', '<p>Self service reservation made by ' . $user->name . ' - <a href="mailto:' . $user->mail . '">click to contact</a></p>', $xml);
 
