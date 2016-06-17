@@ -181,6 +181,7 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#type' => 'textfield',
         '#title' => t('Reason'),
         '#required' => true,
+        '#maxlength' => 40,
     );
     // submit button, d'uh
     $form['submit'] = array(
@@ -304,6 +305,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
             }
         }
     }
+    //if ($user->mail == 'ksharp@stanford.edu') $success = false;
     if ($success) {
 
         // if the booking was successful, format and display a message to that effect
@@ -351,7 +353,16 @@ function stanford_r25_reservation_submit($form, &$form_state)
     } else {
         // display a message if the booking failed
         drupal_set_message('The system was unable to book your room. This may be because of a time conflict with another meeting, or because someone else booked it first or because of problems communicating with 25Live. Please try again.', 'error');
-        _stanford_r25_api_call('delete', null, null, $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value']);
+        $body = array();
+        $event_id = 'unknown';
+        if (!empty($result['index']['R25:EVENT_ID'][0]) && !empty($result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'])) {
+            $event_id = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
+            $body[] = 'failed reservation at: https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
+        }
+        $xyz = print_r($result,TRUE);
+        $body[] = 'failed reservation. no event id. results:<pre>'.$xyz.'</pre>';
+        drupal_mail('stanford_r25', $event_id, 'ksharp@stanford.edu', language_default(), array('body'=>$body, 'subject'=>'r25 reservation failure'));
+//        _stanford_r25_api_call('delete', null, null, $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value']);
     }
     // remove the storage we set up in validate
     unset($form_state['storage']['stanford_r25_booking']);
