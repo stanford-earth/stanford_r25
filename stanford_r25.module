@@ -154,6 +154,7 @@ function stanford_r25_block_info()
  */
 function stanford_r25_block_view($delta = "")
 {
+
     // creates the content of the two blocks defined above and returns a renderable array
     $block = array();
 
@@ -174,15 +175,15 @@ function stanford_r25_block_view($delta = "")
 
         // for the reserve form block, if the room is not reservable then return read-only message
         if ($room_status == STANFORD_R25_ROOM_STATUS_READONLY) {
-            $readonly = variable_get('stanford_r25_readonly_msg', '');
+            $readonly = variable_get('stanford_r25_readonly_msg', array('value' => '', 'format' => null));
             if (!empty($readonly)) {
                 $block['subject'] = '';
-                $block['content'] = check_markup($readonly);
+                $block['content'] = check_markup($readonly['value'],$readonly['format']);
             }
         } else if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
             // if the room is reservable and the user has permission to book, create the reserve form
             // with its max capacity. If we don't know its max capacity, set it to 5
-            if (user_access('book r25 rooms') || 
+            if (user_access('book r25 rooms') ||
                 (($room_id == 'mh01' || $room_id == 'mh02' || $room_id == 'mh03') &&
              !empty($_SERVER['WEBAUTH_USER']))) {
                 $capacity = (empty($rooms[$room_id]['capacity'])) ? 5 : $rooms[$room_id]['capacity'];
@@ -202,10 +203,10 @@ function stanford_r25_block_view($delta = "")
                 // if the user has no reservation permission and is logged in, then print a "no access" message
                 // otherwise the user is anonymous so display the login link,
                 if (user_is_logged_in()) {
-                    $no_access = variable_get('stanford_r25_notpermitted_msg', '');
+                    $no_access = variable_get('stanford_r25_notpermitted_msg', array('value' => '', 'format' => null));
                     if (!empty($no_access)) {
                         $block['subject'] = '';
-                        $block['content'] = check_markup($no_access);
+                        $block['content'] = check_markup($no_access['value'],$no_access['format']);
                     }
                 } else {
                     $login_msg = variable_get('stanford_r25_login_msg', '');
@@ -357,6 +358,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             break;
         case 'feed':
             $xml_command = 'reservations.xml?' . $post_data;
+            //$xml_command = 'rm_reservations.xml?' . $post_data;
             break;
         case 'delete':
             $xml_command = 'event.xml?event_id=' . $post_data;

@@ -174,23 +174,32 @@ function _stanford_r25_settings($form, &$form_state)
         '#description' => t('Login URI for the reservation form if user is anonymous. Login message field must be set for this to show. Defaults to /user/login'),
         '#default_value' => variable_get('stanford_r25_login_uri', '/user/login'),
     );
+    $default_not_permitted = variable_get('stanford_r25_notpermitted_msg',
+        array('value' => '', 'format' => filter_default_format()));
     $form['stanford_r25_notpermitted_msg'] = array(
-        '#type' => 'textarea',
+        '#type' => 'text_format',
         '#title' => t('No Permission to Reserve Rooms Message'),
         '#description' => t('Informational message to logged in users without the "Book R25 Rooms" permission.'),
-        '#default_value' => variable_get('stanford_r25_notpermitted_msg', ''),
+        '#default_value' => $default_not_permitted['value'],
+        '#format' => $default_not_permitted['format'],
     );
+    $default_readonly_msg = variable_get('stanford_r25_readonly_msg',
+        array('value' => '', 'format' => filter_default_format()));
     $form['stanford_r25_readonly_msg'] = array(
-        '#type' => 'textarea',
+        '#type' => 'text_format',
         '#title' => t('Read Only Calendar Message'),
         '#description' => t('A message informing user that a room is not reservable.'),
-        '#default_value' => variable_get('stanford_r25_readonly_msg', ''),
+        '#default_value' => $default_readonly_msg['value'],
+        '#format' => $default_readonly_msg['format'],
     );
+    $default_booking_instr = variable_get('stanford_r25_booking_instructions',
+        array('value' => '', 'format' => filter_default_format()));
     $form['stanford_r25_booking_instructions'] = array(
-        '#type' => 'textarea',
+        '#type' => 'text_format',
         '#title' => t('Booking Instructions'),
         '#description' => t('Instructions that will appear above room reservation forms.'),
-        '#default_value' => variable_get('stanford_r25_booking_instructions', ''),
+        '#default_value' => $default_booking_instr['value'],
+        '#format' => $default_booking_instr['format'],
     );
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array(
@@ -233,13 +242,19 @@ function _stanford_r25_settings_submit($form, &$form_state)
         variable_set('stanford_r25_login_uri', $form_state['values']['stanford_r25_login_uri']);
     }
     if (isset($form_state['values']['stanford_r25_notpermitted_msg'])) {
-        variable_set('stanford_r25_notpermitted_msg', $form_state['values']['stanford_r25_notpermitted_msg']);
+        variable_set('stanford_r25_notpermitted_msg',
+            array('value' => $form_state['values']['stanford_r25_notpermitted_msg']['value'],
+                'format' => $form_state['values']['stanford_r25_notpermitted_msg']['format']));
     }
     if (isset($form_state['values']['stanford_r25_readonly_msg'])) {
-        variable_set('stanford_r25_readonly_msg', $form_state['values']['stanford_r25_readonly_msg']);
+        variable_set('stanford_r25_readonly_msg',
+            array('value' => $form_state['values']['stanford_r25_readonly_msg']['value'],
+                'format' => $form_state['values']['stanford_r25_readonly_msg']['format']));
     }
     if (isset($form_state['values']['stanford_r25_booking_instructions'])) {
-        variable_set('stanford_r25_booking_instructions', $form_state['values']['stanford_r25_booking_instructions']);
+        variable_set('stanford_r25_booking_instructions',
+            array('value' => $form_state['values']['stanford_r25_booking_instructions']['value'],
+                'format' => $form_state['values']['stanford_r25_booking_instructions']['format']));
     }
     drupal_set_message(t('Configuration saved.'));
 }
