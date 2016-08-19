@@ -26,14 +26,14 @@ function _stanford_r25_credentials($form, &$form_state)
         '#type' => 'textfield',
         '#title' => t('Username:'),
         '#default_value' => $clientid,
-        '#required' => TRUE,
+        '#required' => true,
     );
 
     $form['stanford_r25_password'] = array(
         '#type' => 'password',
         '#title' => t('Password:'),
         '#default_value' => $password,
-        '#required' => TRUE,
+        '#required' => true,
     );
 
     $form['stanford_r25_base_url'] = array(
@@ -41,9 +41,18 @@ function _stanford_r25_credentials($form, &$form_state)
         '#title' => t('Base URL'),
         '#description' => t('Base URL for R25 Webs Services calls.'),
         '#default_value' => $base_url,
-        '#required' => TRUE,
+        '#required' => true,
     );
 
+    $form['stanford_r25_room_image_directory'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Room Photos'),
+        '#description' => t('Directory under Drupal files directory for storage of R25 location photos.'),
+        '#default_value' => variable_get('stanford_r25_room_image_directory','R25RoomPhotos'),
+        '#required' => false,
+    );
+
+/*
     $form['stanford_r25_base_image_url'] = array(
         '#type' => 'textfield',
         '#title' => t('Base Image URL'),
@@ -51,7 +60,7 @@ function _stanford_r25_credentials($form, &$form_state)
         '#default_value' => variable_get('stanford_r25_base_image_url', 'https://25live.collegenet.com/25live/data/stanford/run'),
         '#required' => false,
     );
-
+*/
     $fullcalendar_str = '';
     if (libraries_get_path('fullcalendar') === false) {
         $fullcalendar_str = 'You do not have the FullCalendar library installed, so you will not be able to set up self-service bookings. You can download the library from http://fullcalendar.io.';
@@ -97,6 +106,13 @@ function _stanford_r25_credentials_validate($form, &$form_state)
             form_set_error('stanford_r25_password', t("Error. Can't connect to R25 API. Please check your username and password."));
         }
     }
+
+    if (!empty($form_state['values']['stanford_r25_room_image_directory'])) {
+        $directory = 'public://' . $form_state['values']['stanford_r25_room_image_directory'];
+        if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+            form_set_error('stanford_r25_room_image_directory', t('Unable to create writable public directory'));
+        }
+    }
 }
 
 // save the credential information, encrypting it first.
@@ -117,9 +133,17 @@ function _stanford_r25_credentials_submit($form, &$form_state)
         $base_url = $form_state['values']['stanford_r25_base_url'];
     }
     variable_set('stanford_r25_base_url', $base_url);
+
+    /*
     if (isset($form_state['values']['stanford_r25_base_image_url'])) {
         variable_set('stanford_r25_base_image_url', $form_state['values']['stanford_r25_base_image_url']);
     }
+    */
+
+    if (isset($form_state['values']['stanford_r25_room_image_directory'])) {
+        variable_set('stanford_r25_room_image_directory', $form_state['values']['stanford_r25_room_image_directory']);
+    }
+
     drupal_set_message(t('Credentials saved.'));
 
     // get the 25Live account id# for this credential to use if setting todo's.
@@ -492,8 +516,11 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'capacity' => (int)$form_state['values']['capacity'],
         'max_hours' => (int)$form_state['values']['max_hours'],
         'approver_id' => (int)$form_state['values']['approver_id'],
+        'location_info' => _stanford_r25_update_room_info($form_state['values']['space_id']),
     );
-    // try and get room capacity from the webservices api
+    
+    /*
+    // try and get room capacity and photo from the webservices api
     if (!empty($form_state['values']['space_id'])) {
         $space_id = (string)$form_state['values']['space_id'];
         $results = _stanford_r25_api_call('roominfo', null, null, $space_id);
@@ -503,8 +530,68 @@ function _stanford_r25_room_config_submit($form, &$form_state)
             }
         }
     }
+    */
+    
     _stanford_r25_room_config_save($fields);
     $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';
+}
+
+function _stanford_r25_update_room_info($space_id = null)
+{
+    $room_info = array();
+    if (!empty($space_id)) {
+        $results = _stanford_r25_api_call('roominfo', null, null, $space_id);
+        if ($results) {
+
+            $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['index']['R25:LAYOUT_CAPACITY'][0]['value'];
+            $room_info['comments'] = empty($results['index']['R25:COMMENTS'][0]) ? null : $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
+            $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][0])? null : $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
+            $room_info['layout_capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
+            $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
+
+            $layout_features = '';
+            $first_feature = true;
+            if (!empty($results['index']['R25:FEATURE_NAME'][0])) {
+                foreach ($results['index']['R25:FEATURE_NAME'] as $index) {
+                    if (!$first_feature) $layout_features .= ', ';
+                    $layout_features .= $results['vals'][$index]['value'];
+                    $first_feature = false;
+                }
+            }
+            $room_info['layout_features'] = empty($layout_features) ? null : $layout_features;
+
+            $layout_categories = '';
+            $first_category = true;
+            if (!empty($results['index']['R25:CATEGORY_NAME'][0])) {
+                foreach ($results['index']['R25:CATEGORY_NAME'] as $index) {
+                    if (!$first_category) $layout_categories .= ', ';
+                    $layout_categories .= $results['vals'][$index]['value'];
+                    $first_category = false;
+                }
+            }
+            $room_info['layout_categories'] = empty($layout_categories) ? null : $layout_categories;
+
+            // get a room photo if we are using them and available for this room
+            $photo_id = null;
+            if (!empty(variable_get('stanford_r25_room_image_directory',null)) &&
+                !empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
+                $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['value'];
+                $photo = _stanford_r25_api_call('roomphoto', null, null, $photo_id);
+                if ($photo) {
+                    $destination = _stanford_r25_file_path($photo_id);
+                    if (!file_save_data($photo, $destination, FILE_EXISTS_REPLACE)) {
+                        drupal_set_message('Unable to save image for R25 Location ' . $space_id, 'error');
+                        $photo_id = null;
+                    }
+                } else {
+                    $photo_id = null;
+                }
+            }
+            $room_info['photo_id'] = $photo_id;
+            //$room_info['photo_id'] = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
+        }
+    }
+    return $room_info;
 }
 
 // delete a room from a Delete button on the edit form (currently disabled)

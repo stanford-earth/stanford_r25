@@ -125,6 +125,10 @@ function stanford_r25_permission()
     );
 }
 
+function _stanford_r25_file_path($photo_id) {
+    return'public://'.variable_get('stanford_r25_room_image_directory','').'/R25_'.$photo_id.'.jpg';
+}
+
 /**
  * Implements hook_block_info()
  */
@@ -194,10 +198,10 @@ function stanford_r25_block_view($delta = "")
             } else if (($room_id == 'mh01' || $room_id == 'mh02' || $room_id == 'mh03') && empty($_SERVER['WEBAUTH_USER'])) {	
 	$block['subject'] = '';
                 $login_msg = variable_get('stanford_r25_login_msg', 'Authenticate');
-		global $base_url;
-		$destination = drupal_get_destination();
-    		$destination_url = str_replace('http:', 'https:', $base_url) . '/' .
-		    $destination['destination'] . '#stanford-r25-reservation';
+		        global $base_url;
+		        $destination = drupal_get_destination();
+    		    $destination_url = str_replace('http:', 'https:', $base_url) . '/' .
+		        $destination['destination'] . '#stanford-r25-reservation';
                 $block['content'] = l($login_msg,'sites/default/anywebauth/anywebauth.php',array('query'=>array('destination'=>$destination_url),'attributes'=>array('class'=>array('btn','btn-giving'))));
             } else {
                 // if the user has no reservation permission and is logged in, then print a "no access" message
@@ -220,52 +224,41 @@ function stanford_r25_block_view($delta = "")
             }
         }
     } else if ($delta == 'stanford_r25_room_info' && !empty($room_id)) {
-        // for the room information block, if we have a legitimate room_id, use it to request the room information
-        // from the 25Live web api.
-        if (!empty($rooms[$room_id]['space_id'])) {
-            $results = _stanford_r25_api_call('roominfo', null, null, $rooms[$room_id]['space_id']);
-            if ($results) {
-                $room_info = array();
-                if (!empty($results['index']['R25:COMMENTS'][0]) && !empty($results['vals'][$results['index']['R25:COMMENTS'][0]]['value'])) {
-                    $room_info['comments'] = $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
-                }
-                if (!empty($results['index']['R25:LAYOUT_NAME'][0])) {
-                    $room_info['layout_name'] = $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
-                }
-                if (!empty($results['index']['R25:LAYOUT_CAPACITY'][0])) {
-                    $room_info['layout_capacity'] = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
-                }
-                if (!empty($results['index']['R25:LAYOUT_INSTRUCTION'][0])) {
-                    $room_info['layout_instruction'] = $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
-                }
-                $layout_features = '';
-                $first_feature = true;
-                if (!empty($results['index']['R25:FEATURE_NAME'][0])) {
-                    foreach ($results['index']['R25:FEATURE_NAME'] as $index) {
-                        if (!$first_feature) $layout_features .= ', ';
-                        $layout_features .= $results['vals'][$index]['value'];
-                        $first_feature = false;
-                    }
-                }
-                if (!empty($layout_features)) $room_info['layout_features'] = $layout_features;
-                $layout_categories = '';
-                $first_category = true;
-                if (!empty($results['index']['R25:CATEGORY_NAME'][0])) {
-                    foreach ($results['index']['R25:CATEGORY_NAME'] as $index) {
-                        if (!$first_category) $layout_categories .= ', ';
-                        $layout_categories .= $results['vals'][$index]['value'];
-                        $first_category = false;
-                    }
-                }
-                if (!empty($layout_categories)) $room_info['layout_categories'] = $layout_categories;
-                if (!empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
-                    $room_info['photo_id'] = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
-                }
-                $form = drupal_get_form("stanford_r25_room_info_form", $room_info);
-                $block['subject'] = '';
-                $block['content'] = drupal_render($form);
+
+        $content = '<div id="stanford-r25-room-info">';
+
+        if (empty($rooms[$room_id]['location_info'])) {
+            $content .= 'Room information unavailable. Please check with your site administrator.';
+        } else if ($room_status != STANFORD_R25_ROOM_STATUS_DISABLED) {
+            $room_info = $rooms[$room_id]['location_info'];
+            if (!empty($room_info['photo_id'])) {
+                $content .= '<div id="stanford-r25-room-photo"><img src="' . file_create_url(_stanford_r25_file_path($room_info['photo_id'])) . '"></div>';
             }
+            $content .= '<div id="stanford-r25-room-detail">';
+            if (!empty($room_info['comments'])) {
+                $content .= '<div id="stanford-r25-room-comments">' . $room_info['comments'] . '</div>';
+            }
+            if (!empty($room_info['layout_name'])) {
+                $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
+            }
+            if (!empty($room_info['layout_capacity'])) {
+                $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . '</div>';
+            }
+            if (!empty($room_info['layout_features'])) {
+                $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features'] . '</div>';
+            }
+            if (!empty($room_info['layout_categories'])) {
+                $content .= '<div id="stanford-r25-room-categories"><b>Categories:</b> ' . $room_info['layout_categories'] . '</div>';
+            }
+            if (!empty($room_info['layout_instruction'])) {
+                $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> ' . $room_info['layout_instruction'] . '</div>';
+            }
+            $content .= '</div>';
         }
+        $content .= '</div>';
+        $readonly = variable_get('stanford_r25_readonly_msg', array('value' => '', 'format' => null));
+        $block['subject'] = '';
+        $block['content'] = check_markup($content,$readonly['format']);
     }
     return $block;
 }
@@ -356,6 +349,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'roominfo':
             $xml_command = 'space.xml?space_id=' . $post_data;
             break;
+        case 'roomphoto':
+            $xml_command = 'image?image_id=' . $post_data;
+            break;
         case 'feed':
             $xml_command = 'reservations.xml?' . $post_data;
             //$xml_command = 'rm_reservations.xml?' . $post_data;
@@ -386,6 +382,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
     $options['method'] = $method;
     $options['headers'] = array('Content-Type' => 'text/xml; charset=UTF-8');
     $output = drupal_http_request($url, $options);
+    $result = false;
 
     // if the http request returns an error, report it
     // otherwise parse the returned XML and pass it back to whoever requested this call
@@ -393,6 +390,8 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         // if $output is false, report an http error
         $http_error = 'HTTP Request Error: ' . $output->error;
         watchdog('stanford_r25', $http_error);
+    } else if ($command == 'roomphoto') {
+        $result = $output->data;
     } else {
         // if we have output, parse it and create an array to return
         $p = xml_parser_create();

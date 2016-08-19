@@ -63,17 +63,19 @@ function _stanford_r25_calendar_page($room = null)
 // the room info form callback is called by the room info block.
 // it simply outputs room information that originally came from 25Live but is
 // stored in the variables table in our database
+//
+// this code created the room info block as a form so we could have a fieldset popdown
+// but it was requested to be removed, so now we can just output the block in its view hook
+// in the main module
+/*
 function stanford_r25_room_info_form($form, &$form_state, $room_info = '')
 {
-    // originally put the info in a fieldset popdown; removed by request
-    /*
         $form['stanford_r25_room_set'] = array(
             '#type' => 'fieldset',
             '#title' => t('View Room Info'),
             '#collapsible' => TRUE,
             '#collapsed' => TRUE,
         );
-    */
     $content = '<div id="stanford-r25-room-info">';
     if (!empty($room_info['photo_id'])) {
         $content .= '<div id="stanford-r25-room-photo"><img src="' . variable_get('stanford_r25_base_image_url', '') . '/' . $room_info['photo_id'] . '"></div>';
@@ -98,13 +100,14 @@ function stanford_r25_room_info_form($form, &$form_state, $room_info = '')
         $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> ' . $room_info['layout_instruction'] . '</div>';
     }
     $content .= '</div></div>';
-    //$form['stanford_r25_room_set']['room_markup'] = array(  // leftover from fieldset popdown
-    $form['stanford_r25_room_markup'] = array(
+    $form['stanford_r25_room_set']['room_markup'] = array(  
+    //$form['stanford_r25_room_markup'] = array(
         '#type' => 'markup',
         '#markup' => $content,
     );
     return $form;
 }
+*/
 
 // the reservation form callback is called by the reservation block
 function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5)
