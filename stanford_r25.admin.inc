@@ -573,7 +573,8 @@ function _stanford_r25_update_room_info($space_id = null)
 
             // get a room photo if we are using them and available for this room
             $photo_id = null;
-            if (!empty(variable_get('stanford_r25_room_image_directory',null)) &&
+            $image_directory = variable_get('stanford_r25_room_image_directory',null);
+            if (!empty($image_directory) &&
                 !empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
                 $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['value'];
                 $photo = _stanford_r25_api_call('roomphoto', null, null, $photo_id);
