@@ -518,6 +518,9 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'approver_id' => (int)$form_state['values']['approver_id'],
         'location_info' => _stanford_r25_update_room_info($form_state['values']['space_id']),
     );
+    if (!empty($fields['location_info']['capacity'])) {
+	$fields['capacity'] = $fields['location_info']['capacity'];
+    }
     
     /*
     // try and get room capacity and photo from the webservices api
@@ -543,10 +546,10 @@ function _stanford_r25_update_room_info($space_id = null)
         $results = _stanford_r25_api_call('roominfo', null, null, $space_id);
         if ($results) {
 
-            $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['index']['R25:LAYOUT_CAPACITY'][0]['value'];
+            $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals']['R25:LAYOUT_CAPACITY'][0]['value'];
             $room_info['comments'] = empty($results['index']['R25:COMMENTS'][0]) ? null : $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
             $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][0])? null : $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
-            $room_info['layout_capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
+            // $room_info['layout_capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
             $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
 
             $layout_features = '';

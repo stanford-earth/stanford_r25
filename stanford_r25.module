@@ -241,15 +241,17 @@ function stanford_r25_block_view($delta = "")
             if (!empty($room_info['layout_name'])) {
                 $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
             }
-            if (!empty($room_info['layout_capacity'])) {
-                $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . '</div>';
+            if (!empty($room_info['capacity'])) {
+                $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['capacity'] . '</div>';
             }
             if (!empty($room_info['layout_features'])) {
                 $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features'] . '</div>';
             }
+/*
             if (!empty($room_info['layout_categories'])) {
                 $content .= '<div id="stanford-r25-room-categories"><b>Categories:</b> ' . $room_info['layout_categories'] . '</div>';
             }
+*/
             if (!empty($room_info['layout_instruction'])) {
                 $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> ' . $room_info['layout_instruction'] . '</div>';
             }
