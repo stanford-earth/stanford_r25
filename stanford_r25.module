@@ -364,6 +364,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'acctinfo':
             $xml_command = 'contact.xml?current=T';
             break;
+        case 'security':
+            $xml_command = 'secgroup.xml?security_group_id=' . $post_data . '&scope=extended';
+            break;
         default:
             $xml_command = 'null.xml';
     }

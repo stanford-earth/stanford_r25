@@ -267,7 +267,9 @@ function stanford_r25_reservation_submit($form, &$form_state)
     $xml_file = '/stanford_r25_reserve.xml';
     if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE && intval($form_state['storage']['stanford_r25_booking']['room']['approver_id']) > 0) {
         $xml_file = '/stanford_r25_reserve_todo.xml';
+        //$result = _stanford_r25_api_call('security', null, null, 209);
     }
+    // to do: change approver to security group
 
     // get the XML template for creating an event and replace tokens with data for this reservation
     $event_state = $event_state - 1;
