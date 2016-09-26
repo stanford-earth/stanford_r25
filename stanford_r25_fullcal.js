@@ -14,7 +14,22 @@ var qtip = false;  // assume we don't have the qtip library to start
         if (defaultDate === null) defaultDate = new Date();
         deleteCookie("stanford-r25-date");
         var defaultView = readCookie("stanford-r25-view");
-        if (defaultView === null) defaultView = "month";
+        if (defaultView === null) {
+            switch (Drupal.settings.stanfordR25DefaultView) {
+                case 1:
+                    defaultView = 'agendaDay';
+                    break;
+                case 2:
+                    defaultView = 'agendaWeek';
+                    break;
+                case 3:
+                    defaultView = 'month';
+                    break;
+                default:
+                    defaultView = 'agendaWeek';
+            }
+            // defaultView = "month";
+        }
         deleteCookie("stanford-r25-view");
 
         // get the romm id set on the server in Drupal
@@ -51,6 +66,7 @@ var qtip = false;  // assume we don't have the qtip library to start
         });
 
         $('#calendar').fullCalendar({
+            allDaySlot: false,
             // if in month view and the user clicks a date, go to agenda day view
             dayClick: function (date, jsEvent, view) {
                 if (view.name === "month") {

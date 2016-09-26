@@ -36,7 +36,6 @@ function _stanford_r25_feed()
         foreach ($results['index']['R25:RESERVATION_ID'] as $key => $value) {
             $id = $results['vals'][$value]['value'];
             $title = _stanford_r25_feed_get_value($results, 'R25:EVENT_NAME', $key);
-            if ($space_id == '395') $title = drupal_html_to_text(_stanford_r25_feed_get_value($results, 'R25:TEXT', $key));
             $start = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_START_DT', $key);
             $end = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_END_DT', $key);
             $headcount = _stanford_r25_feed_get_value($results, 'R25:EXPECTED_COUNT', $key);
@@ -44,6 +43,7 @@ function _stanford_r25_feed()
             $state_text = _stanford_r25_feed_get_value($results, 'R25:STATE_NAME', $key);
             $items[] = array(
                 'id' => $id,
+                'index' => $value,
                 'title' => $title,
                 'start' => $start,
                 'end' => $end,
@@ -63,11 +63,17 @@ function _stanford_r25_feed()
                         $text = $results['vals'][$results['index']['R25:TEXT'][$key]]['value'];
                     }
                     if (!empty($text)) {
-                        $index = count($results['index']['R25:RESERVATION_ID']);
+                        //$index = count($results['index']['R25:RESERVATION_ID']);
+                        $index = count($items);
                         while ($index) {
                             $index -= 1;
-                            if (intval($value) > intval($results['index']['R25:RESERVATION_ID'][$index])) {
-                                $items[$index]['description'] = $text;
+                            //if (intval($value) > intval($results['index']['R25:RESERVATION_ID'][$index])) {
+                            if (intval($value) > intval($items[$index]['index'])) {
+                                if ($space_id == '395') {
+                                    $items[$index]['title'] = drupal_html_to_text($text);
+                                } else {
+                                    $items[$index]['description'] = $text;
+                                }
                                 break;
                             }
                         }

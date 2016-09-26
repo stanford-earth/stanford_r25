@@ -16,6 +16,7 @@ function _stanford_r25_calendar_page($room = null)
             drupal_add_js(array('stanfordR25MaxHours' => $rooms[$room]['max_hours']), 'setting');
             $can_book = (user_access('book r25 rooms') ? 1 : 0);
             drupal_add_js(array('stanfordR25Access' => $can_book), 'setting');
+            drupal_add_js(array('stanfordR25DefaultView' => $rooms[$room]['default_view']), 'setting');
             if (intval($rooms[$room]['caltype']) == 1) {
                 // if the calendar is from 25Live Publisher, output the appropriate divs and javascript files
                 $output['control_div'] = array(

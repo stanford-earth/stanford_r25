@@ -368,7 +368,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
             'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2,
-            'approver_id' => '');
+            'approver_id' => '', 'default_view' => 'weekly');
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -402,6 +402,13 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $config['status'],
         '#options' => array(0 => 'Disabled', 1 => 'Read-Only Calendar', 2 => 'Tentative Bookings', 3 => 'Confirmed Bookings'),
         '#description' => t('Whether to just display a calendar or allow tentative or confirmed bookings.'),
+    );
+    $form['default_view'] = array(
+        '#type' => 'radios',
+        '#title' => t('Default Calendar View'),
+        '#default_value' => $config['default_view'],
+        '#options' => array(1 => 'Daily', 2 => 'Weekly', 3 => 'Monthly'),
+        '#description' => t('Whether the initial view of a calendar page should be a monthly, weekly, or daily view. Applies only to FullCalendar.'),
     );
     $form['max_hours'] = array(
         '#title' => t('Maximum Reservation (Hours)'),
@@ -517,9 +524,10 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'max_hours' => (int)$form_state['values']['max_hours'],
         'approver_id' => (int)$form_state['values']['approver_id'],
         'location_info' => _stanford_r25_update_room_info($form_state['values']['space_id']),
+        'default_view' => (int)$form_state['values']['default_view'],
     );
     if (!empty($fields['location_info']['capacity'])) {
-	$fields['capacity'] = $fields['location_info']['capacity'];
+	    $fields['capacity'] = $fields['location_info']['capacity'];
     }
     
     /*
