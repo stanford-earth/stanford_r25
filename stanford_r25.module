@@ -183,6 +183,7 @@ function stanford_r25_block_view($delta = "")
             if (!empty($readonly)) {
                 $block['subject'] = '';
                 $block['content'] = check_markup($readonly['value'],$readonly['format']);
+                if ($room_id == 'ma65') $block['content'] = '';
             }
         } else if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
             // if the room is reservable and the user has permission to book, create the reserve form

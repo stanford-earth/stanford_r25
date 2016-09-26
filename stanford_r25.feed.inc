@@ -36,6 +36,7 @@ function _stanford_r25_feed()
         foreach ($results['index']['R25:RESERVATION_ID'] as $key => $value) {
             $id = $results['vals'][$value]['value'];
             $title = _stanford_r25_feed_get_value($results, 'R25:EVENT_NAME', $key);
+            if ($space_id == '395') $title = drupal_html_to_text(_stanford_r25_feed_get_value($results, 'R25:TEXT', $key));
             $start = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_START_DT', $key);
             $end = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_END_DT', $key);
             $headcount = _stanford_r25_feed_get_value($results, 'R25:EXPECTED_COUNT', $key);
