@@ -183,12 +183,15 @@ function stanford_r25_block_view($delta = "")
             if (!empty($readonly)) {
                 $block['subject'] = '';
                 $block['content'] = check_markup($readonly['value'],$readonly['format']);
-                if ($room_id == 'ma65') $block['content'] = '';
             }
         } else if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
             // if the room is reservable and the user has permission to book, create the reserve form
             // with its max capacity. If we don't know its max capacity, set it to 5
-            if (user_access('book r25 rooms') ||
+            if ($rooms[$room_id]['honor_blackouts'] == 1 &&  _stanford_r25_date_blacked_out(time())) {
+                $block['subject'] = '';
+                $block['content'] = 'This room is currently blacked out for reservations. Please contact your ' .
+                    'department administration for more information.';
+            } else if (user_access('book r25 rooms') ||
                 (($room_id == 'mh01' || $room_id == 'mh02' || $room_id == 'mh03') &&
              !empty($_SERVER['WEBAUTH_USER']))) {
                 $capacity = (empty($rooms[$room_id]['capacity'])) ? 5 : $rooms[$room_id]['capacity'];
@@ -421,4 +424,50 @@ function stanford_r25_mail($key, &$message, $params)
 {
     $message['subject'] = $params['subject'];
     $message['body'] = $params['body'];
+}
+
+function _stanford_r25_parse_blackout_dates($inStr) {
+    $blackouts = array();
+    $blackout_text = trim($inStr);
+    if (!empty($blackout_text)) {
+        $tmp1 = explode("\n", $blackout_text);
+        foreach ($tmp1 as $tmp2) {
+            $blackout = trim($tmp2);
+            if (preg_match('(\d{4}-\d{2}-\d{2} - \d{4}-\d{2}-\d{2})',$blackout) === 1) {
+                $tmp3 = explode(" - ",$blackout);
+                $blackouts[] = array('start'=>$tmp3[0],'end'=>$tmp3[1]);
+            }
+        }
+    }
+    return $blackouts;
+}
+
+function _stanford_r25_date_blacked_out($date) {
+    
+    // if I'm currently in a blackout period, the requested date doesn't matter - we consider it blacked out.
+    // if I'm *not* currently in a blackout period, then the requested date has to be before the next blackout starts.
+    // if I'm currently past the last possible blackout, consider me blacked out so an admin will update the dates.
+    $blackouts = _stanford_r25_parse_blackout_dates(variable_get('stanford_r25_blackout_dates',''));
+    $blacked_out = true;
+    
+    // first find out if we are currently in a blackout
+    // if not, find out when the next blackout starts
+    $cur = time();
+    $cur_blackout = true;
+    $next_blackout = 0;
+    foreach ($blackouts as $blackout) {
+        if ($cur < strtotime($blackout['start'])) {
+            $cur_blackout = false;
+            $next_blackout = strtotime($blackout['start']);
+            break;
+        } else if ($cur <= strtotime($blackout['end'])) {
+            break;
+        }
+    }
+    
+    // now see if the requested date is before the next blackout
+    if (!$cur_blackout && $date < $next_blackout) {
+        $blacked_out = false;
+    }
+    return $blacked_out;
 }

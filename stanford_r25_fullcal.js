@@ -11,24 +11,34 @@ var qtip = false;  // assume we don't have the qtip library to start
 
         // if we are coming back from a reservation, check cookies for date and calendar view to bring the user back to
         var defaultDate = readCookie("stanford-r25-date");
-        if (defaultDate === null) defaultDate = new Date();
+        if (defaultDate === null) {
+            if (Drupal.settings.hasOwnProperty("stanfordR25ParamDate")) {
+                defaultDate = Drupal.settings.stanfordR25ParamDate;
+            } else {
+                defaultDate = new Date();
+            }
+        }
         deleteCookie("stanford-r25-date");
+
         var defaultView = readCookie("stanford-r25-view");
         if (defaultView === null) {
-            switch (Drupal.settings.stanfordR25DefaultView) {
-                case 1:
-                    defaultView = 'agendaDay';
-                    break;
-                case 2:
-                    defaultView = 'agendaWeek';
-                    break;
-                case 3:
-                    defaultView = 'month';
-                    break;
-                default:
-                    defaultView = 'agendaWeek';
+            if (Drupal.settings.hasOwnProperty("stanfordR25ParamView")) {
+                defaultView = Drupal.settings.stanfordR25ParamView;
+            } else {
+                switch (Drupal.settings.stanfordR25DefaultView) {
+                    case 1:
+                        defaultView = 'agendaDay';
+                        break;
+                    case 2:
+                        defaultView = 'agendaWeek';
+                        break;
+                    case 3:
+                        defaultView = 'month';
+                        break;
+                    default:
+                        defaultView = 'month';
+                }
             }
-            // defaultView = "month";
         }
         deleteCookie("stanford-r25-view");
 

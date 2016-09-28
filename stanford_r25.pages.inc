@@ -22,6 +22,12 @@ function _stanford_r25_calendar_page($room = null)
             $can_book = (user_access('book r25 rooms') ? 1 : 0);
             drupal_add_js(array('stanfordR25Access' => $can_book), 'setting');
             drupal_add_js(array('stanfordR25DefaultView' => $rooms[$room]['default_view']), 'setting');
+            if (!empty($params['view'])) {
+                drupal_add_js(array('stanfordR25ParamView' => $params['view']), 'setting');
+            }
+            if (!empty($params['date'])) {
+                drupal_add_js(array('stanfordR25ParamDate' => $params['date']), 'setting');
+            }
             if (intval($rooms[$room]['caltype']) == 1) {
                 // if the calendar is from 25Live Publisher, output the appropriate divs and javascript files
                 $output['control_div'] = array(
@@ -215,21 +221,27 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
 
 }
 
+/**
 // some date and time formatting stuff - taking input from form date/time and duration fields
 // and returning start and end times in W3C format to pass to the 25Live web services api.
-function _stanford_r25_format_date_and_time($booking_date, $booking_duration, $max_hours)
+function _stanford_r25_format_date_and_time($date, $booking_duration, $max_hours)
 {
-    $date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
-    $date_errors = DateTime::getLastErrors();
-    if (!$date || $date_errors["warning_count"] > 0 || $date_errors["error_count"] > 0) {
-        return false;
-    }
+    //$date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
+    //$date_errors = DateTime::getLastErrors();
+    // don't allow reservations more than 1/2 hour in the past. we're not a time machine.
+    //if (date_timestamp_get($date) < (time() - 1800)) {
+    //    $date = false;
+    //}
+    //if (!$date || $date_errors["warning_count"] > 0 || $date_errors["error_count"] > 0) {
+    //    return false;
+    // }
     $duration = intval($booking_duration);
     if ($duration < 0 || $duration > (($max_hours*2)-1)) return false;
     $duration = ($duration * 30) + 30;
     return array('day' => $date->format('Y-m-d'), 'start' => $date->format(DateTime::W3C),
         'end' => $date->add(new DateInterval('PT' . $duration . 'M'))->format(DateTime::W3C));
 }
+**/
 
 // reservation form validation - formats the date strings and stores them in form 'storage' for the submit routine
 function stanford_r25_reservation_validate($form, &$form_state)
@@ -242,17 +254,53 @@ function stanford_r25_reservation_validate($form, &$form_state)
     $rooms = _stanford_r25_room_config_load();
     if (empty($form_state['input']['stanford_r25_booking_roomid']) || !isset($rooms[$form_state['input']['stanford_r25_booking_roomid']])) {
         form_set_error('stanford_r25_booking_roomid', 'Invalid room id requested.');
+        return;
     } else {
         $booking_info['room'] = $rooms[$form_state['input']['stanford_r25_booking_roomid']];
     }
-    $date_strs = _stanford_r25_format_date_and_time($form_state['input']['stanford_r25_booking_date'],
-        $form_state['input']['stanford_r25_booking_duration'],$booking_info['room']['max_hours']);
-    if ($date_strs === false) {
-        form_set_error('stanford_r25_booking_time', 'Invalid date and time or duration submitted.');
-    } else {
-        $booking_info['dates'] = $date_strs;
+
+    // make sure we have a valid date
+    $booking_date = $form_state['input']['stanford_r25_booking_date'];
+    $date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
+    $date_errors = DateTime::getLastErrors();
+    if (!$date || $date_errors["warning_count"] > 0 || $date_errors["error_count"] > 0) {
+        form_set_error('stanford_r25_booking_date','An invalid date was supplied.');
+        return;
     }
-    if (!empty($booking_info)) $form_state['storage']['stanford_r25_booking'] = $booking_info;
+    // don't allow reservations more than 1/2 hour in the past. we're not a time machine.
+    if (date_timestamp_get($date) < (time() - 1800)) {
+        form_set_error('stanford_r25_booking_date','A reservation in the past was requested. This isn\'t a time machine!');
+        return;
+    }
+
+    // make sure date isn't blacked out if room checks for that
+    if ($rooms[$form_state['input']['stanford_r25_booking_roomid']]['honor_blackouts'] == 1) {
+        if (_stanford_r25_date_blacked_out(date_timestamp_get($date))) {
+            form_set_error('stanford_r25_booking_date','This room is unavailable for reservation on the requested date. ' .
+                'The room may only be reserved until the end of the current quarter. Please see your department ' .
+                'administrator for more information.');
+            return;
+        }
+    }
+
+    // build 25Live date strings
+    $duration = intval($form_state['input']['stanford_r25_booking_duration']);
+    if ($duration < 0 || $duration > (($booking_info['room']['max_hours']*2)-1)) {
+        form_set_error('stanford_r25_booking_duration','Invalid duration was submitted.');
+        return;
+    }
+    $duration = ($duration * 30) + 30;
+    $date_strs =  array('day' => $date->format('Y-m-d'), 'start' => $date->format(DateTime::W3C),
+        'end' => $date->add(new DateInterval('PT' . $duration . 'M'))->format(DateTime::W3C));
+
+    //$date_strs = _stanford_r25_format_date_and_time($form_state['input']['stanford_r25_booking_date'],
+    //    $form_state['input']['stanford_r25_booking_duration'],$booking_info['room']['max_hours']);
+    //if ($date_strs === false) {
+    //    form_set_error('stanford_r25_booking_time', 'Invalid date and time or duration submitted.');
+    //} else {
+    $booking_info['dates'] = $date_strs;
+    //}
+    $form_state['storage']['stanford_r25_booking'] = $booking_info;
 }
 
 // submits the reservation request to 25Live webservices

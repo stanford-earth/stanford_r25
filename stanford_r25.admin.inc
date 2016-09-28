@@ -225,6 +225,14 @@ function _stanford_r25_settings($form, &$form_state)
         '#default_value' => $default_booking_instr['value'],
         '#format' => $default_booking_instr['format'],
     );
+    $form['stanford_r25_blackout_dates'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Blackout Dates'),
+        '#description' => t('A list of blackout periods in the form "YYYY-MM-DD - YYYY-MM-DD" when this module may ' .
+            'not make reservations for rooms marked as honoring blackouts. Does not use 25Live blackout periods ' .
+            'because rooms may need to be reservable by other processes such as registrar room assignment.'),
+        '#default_value' => variable_get('stanford_r25_blackout_dates',''),
+    );
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array(
         '#type' => 'submit',
@@ -244,6 +252,11 @@ function _stanford_r25_settings_validate($form, &$form_state)
     }
     if (empty($form_state['values']['stanford_r25_parent_event_id']) || !is_numeric($form_state['values']['stanford_r25_parent_event_id'])) {
         form_set_error('stanford_r25_parent_event_id', t('Parent Event ID must be a number.'));
+    }
+    if (!empty($form_state['values']['stanford_r25_blackout_dates'])) {
+        if (empty(_stanford_r25_parse_blackout_dates($form_state['values']['stanford_r25_blackout_dates']))) {
+            form_set_error('stanford_r25_blackout_dates',t('Blackout dates must be in the form "YYYY-MM-DD - YYYY-MM-DD".'));
+        }
     }
 }
 
@@ -280,6 +293,9 @@ function _stanford_r25_settings_submit($form, &$form_state)
             array('value' => $form_state['values']['stanford_r25_booking_instructions']['value'],
                 'format' => $form_state['values']['stanford_r25_booking_instructions']['format']));
     }
+    if (isset($form_state['values']['stanford_r25_blackout_dates'])) {
+        variable_set('stanford_r25_blackout_dates', $form_state['values']['stanford_r25_blackout_dates']);
+    }
     drupal_set_message(t('Configuration saved.'));
 }
 
@@ -294,7 +310,7 @@ function _stanford_r25_room_list()
         t('25Live Publisher Webname'),
         t('25Live Space ID'),
         t('Max Reservation Hrs'),
-        t('Email Requests'),
+        //t('Email Requests'),
         t('Created'),
         t('Status'),
         t('Approver ID'),
@@ -320,7 +336,7 @@ function _stanford_r25_room_list()
         $row[] = array('data' => $config['spud_name']);
         $row[] = array('data' => $config['space_id']);
         $row[] = array('data' => $config['max_hours']);
-        $row[] = array('data' => $config['email_list']);
+        //$row[] = array('data' => $config['email_list']);
         $row[] = array('data' => $config['created']);
         switch ($config['status']) {
             case 1:
@@ -368,7 +384,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
             'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2,
-            'approver_id' => '', 'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0);
+            'approver_id' => '', 'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
+            'honor_blackouts' => 0);
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -462,6 +479,14 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $config['permalink'],
         '#description' => t('Useful if you want to distribute links to specific calendar pages to people.'),
     );
+    $form['honor_blackouts'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Honor Blackout Dates for Reservations'),
+        '#return_value' => 1,
+        '#default_value' => $config['honor_blackouts'],
+        '#description' => t('Only allow reservations if current and requested dates are after the end of the most ' .
+            'recent blackout period and before the start of the next blackout period.'),
+    );
     $form['email_list'] = array(
         '#title' => t('Email List'),
         '#type' => 'textfield',
@@ -541,6 +566,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'default_view' => (int)$form_state['values']['default_view'],
         'description_as_title' => (int)$form_state['values']['description_as_title'],
         'permalink' => (int)$form_state['values']['permalink'],
+        'honor_blackouts' => (int)$form_state['values']['honor_blackouts'],
     );
     if (!empty($fields['location_info']['capacity'])) {
 	    $fields['capacity'] = $fields['location_info']['capacity'];
