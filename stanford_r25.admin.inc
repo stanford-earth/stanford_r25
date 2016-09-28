@@ -368,7 +368,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
             'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2,
-            'approver_id' => '', 'default_view' => 'weekly');
+            'approver_id' => '', 'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0);
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -448,6 +448,20 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             ':input[name="status"]' => array(array('value' => 2), array('value' => 3))
         )),
     );
+    $form['description_as_title'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Show event description as event name in FullCalendar'),
+        '#return_value' => 1,
+        '#default_value' => $config['description_as_title'],
+        '#description' => t("Check if you would like to use the Event Description field instead of the Event Name in the FullCalendar time slot."),
+    );
+    $form['permalink'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Show a permlink on FullCalendar pages for the view and date'),
+        '#return_value' => 1,
+        '#default_value' => $config['permalink'],
+        '#description' => t('Useful if you want to distribute links to specific calendar pages to people.'),
+    );
     $form['email_list'] = array(
         '#title' => t('Email List'),
         '#type' => 'textfield',
@@ -525,6 +539,8 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'approver_id' => (int)$form_state['values']['approver_id'],
         'location_info' => _stanford_r25_update_room_info($form_state['values']['space_id']),
         'default_view' => (int)$form_state['values']['default_view'],
+        'description_as_title' => (int)$form_state['values']['description_as_title'],
+        'permalink' => (int)$form_state['values']['permalink'],
     );
     if (!empty($fields['location_info']['capacity'])) {
 	    $fields['capacity'] = $fields['location_info']['capacity'];

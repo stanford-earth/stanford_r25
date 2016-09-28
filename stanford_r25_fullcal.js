@@ -99,6 +99,15 @@ var qtip = false;  // assume we don't have the qtip library to start
                     });
                 }
             },
+            viewRender: function(view, element) {
+                if ($('#permalink').length) {
+                    var permalink = location.origin + location.pathname +
+                        '?view=' + view.name + '&date=' +
+                        $('#calendar').fullCalendar('getDate').format('YYYY-MM-DD');
+                    $('#permalink').html('<a href="' + permalink + '">Permalink to this page</a>');
+                    //console.log('permalink: ' + permalink);
+                }
+            },
             // define how FullCalendar gets events by calling the r25_feed callback function
             events: {
                 url: 'r25_feed',

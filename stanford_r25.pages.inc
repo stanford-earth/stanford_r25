@@ -3,6 +3,11 @@
 // the menu page callback function to build the main content for a calendar page
 function _stanford_r25_calendar_page($room = null)
 {
+    //$params = drupal_get_query_parameters();
+    $params = array();
+    foreach (drupal_get_query_parameters() as $key => $param) {
+        $params[$key] = check_plain($param);
+    }
     $rooms = _stanford_r25_room_config_load();
     $output = array();
     if (!empty($room) && isset($rooms[$room]['status'])) {
@@ -48,6 +53,12 @@ function _stanford_r25_calendar_page($room = null)
                     '#type' => 'markup',
                     '#markup' => '<div id="calendar"></div>',
                 );
+                if (isset($rooms[$room]['permalink']) && intval($rooms[$room]['permalink']) == 1) {
+                    $output['permalink'] = array(
+                        '#type' => 'markup',
+                        '#markup' => '<div id="permalink"></div>',
+                    );
+                }
             }
         } else {
             $output['no_room'] = array(
@@ -287,7 +298,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
     $xml = str_replace('[r25_approver_id]', $form_state['storage']['stanford_r25_booking']['room']['approver_id'],$xml);
     $xml = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $xml);
     global $user;
-    $xml = str_replace('[r25_created_by]', '<p>Self service reservation made by ' . $user->name . ' - <a href="mailto:' . $user->mail . '">click to contact</a></p>', $xml);
+    $xml = str_replace('[r25_created_by]', '<p>Self service reservation made by ' . $user->name . ' - <a href="mailto:' . $user->mail . '">click to contact by email.</a></p>', $xml);
 
     // send the request to our api function
     $result = _stanford_r25_api_call('reserve', null, null, $xml);
