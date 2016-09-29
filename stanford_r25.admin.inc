@@ -254,7 +254,9 @@ function _stanford_r25_settings_validate($form, &$form_state)
         form_set_error('stanford_r25_parent_event_id', t('Parent Event ID must be a number.'));
     }
     if (!empty($form_state['values']['stanford_r25_blackout_dates'])) {
-        if (empty(_stanford_r25_parse_blackout_dates($form_state['values']['stanford_r25_blackout_dates']))) {
+	$blackouts = _stanford_r25_parse_blackout_dates($form_state['values']['stanford_r25_blackout_dates']);
+
+        if (empty($blackouts)) {
             form_set_error('stanford_r25_blackout_dates',t('Blackout dates must be in the form "YYYY-MM-DD - YYYY-MM-DD".'));
         }
     }
