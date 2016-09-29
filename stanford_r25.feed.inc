@@ -127,6 +127,7 @@ function _stanford_r25_feed()
                 if (!empty($item['scheduled_by'])) {
                     $items[$key]['tip'] .= '<br />' . $item['scheduled_by'];
                 }
+                drupal_alter('stanford_r25_contact',$items[$key]['tip']);
             }
         }
     }
