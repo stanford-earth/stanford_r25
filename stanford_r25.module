@@ -194,7 +194,7 @@ function stanford_r25_block_view($delta = "")
             } else if (user_access('book r25 rooms') ||
                 (($room_id == 'mh01' || $room_id == 'mh02' || $room_id == 'mh03') &&
              !empty($_SERVER['WEBAUTH_USER']))) {
-                $capacity = (empty($rooms[$room_id]['capacity'])) ? 5 : $rooms[$room_id]['capacity'];
+                $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
                 $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity);
                 $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                 $block['content'] = drupal_render($form);
@@ -368,8 +368,11 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'acctinfo':
             $xml_command = 'contact.xml?current=T';
             break;
-        case 'security':
-            $xml_command = 'secgroup.xml?security_group_id=' . $post_data . '&scope=extended';
+        case 'secgroup':
+            $xml_command = 'secgroups.xml?group_name=' . $post_data;
+            break;
+        case 'r25users':
+            $xml_command = 'r25users.xml?security_group_id=' . $post_data;
             break;
         default:
             $xml_command = 'null.xml';

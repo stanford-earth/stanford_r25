@@ -312,10 +312,9 @@ function _stanford_r25_room_list()
         t('25Live Publisher Webname'),
         t('25Live Space ID'),
         t('Max Reservation Hrs'),
-        //t('Email Requests'),
         t('Created'),
         t('Status'),
-        t('Approver ID'),
+        t('Approver Security Group'),
         array('data' => t('Operations'), 'colspan' => '3'),
     );
     $rows = array();
@@ -338,7 +337,6 @@ function _stanford_r25_room_list()
         $row[] = array('data' => $config['spud_name']);
         $row[] = array('data' => $config['space_id']);
         $row[] = array('data' => $config['max_hours']);
-        //$row[] = array('data' => $config['email_list']);
         $row[] = array('data' => $config['created']);
         switch ($config['status']) {
             case 1:
@@ -354,7 +352,7 @@ function _stanford_r25_room_list()
                 $status = t('Disabled');
         }
         $row[] = array('data' => $status);
-        $row[] = array('data' => $config['approver_id']);
+        $row[] = array('data' => $config['approver_secgroup_name']);
         // Set the edit column.
         $row[] = array('data' => l(t('edit'), STANFORD_R25_MENU_PATH . '/' . $key . '/edit'));
 
@@ -385,9 +383,9 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     }
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
-            'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'capacity' => 5, 'max_hours' => 2,
-            'approver_id' => '', 'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
-            'honor_blackouts' => 0);
+            'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'max_hours' => 2,
+            'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
+            'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0);
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -437,14 +435,6 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $config['max_hours'],
         '#description' => t('The maximum number of hours for a reservation via this interface. Set to 0 for no limit.'),
     );
-    $form['approver_id'] = array(
-        '#title' => t('25Live User ID# of Approver'),
-        '#type' => 'textfield',
-        '#required' => false,
-        '#size' => 30,
-        '#default_value' => $config['approver_id'],
-        '#description' => t('Optional 25Live Contact ID of person who will approve reservations for this room. If set, new reservations will create approval task for this user in 25Live.'),
-    );
     $form['spud_name'] = array(
         '#title' => t('25Live Publisher Webname'),
         '#type' => 'textfield',
@@ -489,17 +479,27 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#description' => t('Only allow reservations if current and requested dates are after the end of the most ' .
             'recent blackout period and before the start of the next blackout period.'),
     );
+    $form['approver_secgroup_name'] = array(
+        '#title' => t('Approver Security Group'),
+        '#type' => 'textfield',
+        '#size' => 30,
+        '#default_value' => $config['approver_secgroup_name'],
+        '#description' => t('The R25 Security Group, also a Stanford Workgroup, of those who can approve tentative ' .
+            'reservation requests. All members of this group will receive email with the request information. '),
+    );
+    $form['approver_secgroup_id'] = array(
+        '#title' => t('Approver Security Group ID'),
+        '#type' => 'hidden',
+        '#size' => 30,
+        '#default_value' => $config['approver_secgroup_id'],
+        '#description' => t('The corresponding 25Live id number for the security group specified above.'),
+    );
     $form['email_list'] = array(
         '#title' => t('Email List'),
         '#type' => 'textfield',
         '#size' => 30,
         '#default_value' => $config['email_list'],
-        '#description' => t('Comma-separated list of email addresses which should receive notification of new reservation requests. Leave blank for "none".'),
-    );
-    $form['capacity'] = array(
-        '#title' => 'Capacity',
-        '#type' => 'hidden',
-        '#default_value' => $config['capacity'],
+        '#description' => t('Comma-separated list of email addresses which should receive notification of any reservation requests. Leave blank for "none".'),
     );
     $form['created'] = array(
         '#title' => t('Created on'),
@@ -541,11 +541,13 @@ function _stanford_r25_room_config_validate($form, &$form_state)
     if (!is_numeric($max_hours) || intval($max_hours) != $max_hours || $max_hours < 0) {
         form_set_error('max_hours', 'Maximum Reservation (Hours) must be zero or a positive integer.');
     }
-    if (!empty($form_state['values']['approver_id'])) {
-        $approver_id = $form_state['values']['approver_id'];
-        if (!is_numeric($approver_id) || intval($approver_id) != $approver_id || $approver_id < 0) {
-            form_set_error('approver_id', 'Approver ID must be blank, zero, or a positive integer.');
-        }
+    if (empty($form_state['values']['approver_secgroup_name'])) {
+        $form_state['values']['approver_secgroup_id'] = 0;
+    } else {
+        $form_state['values']['approver_secgroup_id'] = _stanford_r25_secgroup_id($form_state['values']['approver_secgroup_name']);
+        if (empty($form_state['values']['approver_secgroup_id'])) {
+            form_set_error('approver_secgroup_name', 'Unable to retrieve security group id from 25Live.');
+         }
     }
 }
 
@@ -561,32 +563,15 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'created' => (string)$form_state['values']['created'],
         'status' => (int)$form_state['values']['status'],
         'caltype' => (int)$form_state['values']['caltype'],
-        'capacity' => (int)$form_state['values']['capacity'],
         'max_hours' => (int)$form_state['values']['max_hours'],
-        'approver_id' => (int)$form_state['values']['approver_id'],
         'location_info' => _stanford_r25_update_room_info($form_state['values']['space_id']),
         'default_view' => (int)$form_state['values']['default_view'],
         'description_as_title' => (int)$form_state['values']['description_as_title'],
         'permalink' => (int)$form_state['values']['permalink'],
         'honor_blackouts' => (int)$form_state['values']['honor_blackouts'],
+        'approver_secgroup_name' => (string)$form_state['values']['approver_secgroup_name'],
+        'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
     );
-    if (!empty($fields['location_info']['capacity'])) {
-	    $fields['capacity'] = $fields['location_info']['capacity'];
-    }
-    
-    /*
-    // try and get room capacity and photo from the webservices api
-    if (!empty($form_state['values']['space_id'])) {
-        $space_id = (string)$form_state['values']['space_id'];
-        $results = _stanford_r25_api_call('roominfo', null, null, $space_id);
-        if ($results) {
-            if (!empty($results['index']['R25:LAYOUT_CAPACITY'][0])) {
-                $fields['capacity'] = $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
-            }
-        }
-    }
-    */
-    
     _stanford_r25_room_config_save($fields);
     $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';
 }
@@ -600,8 +585,7 @@ function _stanford_r25_update_room_info($space_id = null)
             $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
             $room_info['comments'] = empty($results['index']['R25:COMMENTS'][0]) ? null : $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
             $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][0])? null : $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
-            // $room_info['layout_capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
-            $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][0]) ? 
+            $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][0]) ?
 		null : 
 		empty($results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value']) ?
 		    null :
@@ -650,6 +634,17 @@ function _stanford_r25_update_room_info($space_id = null)
         }
     }
     return $room_info;
+}
+
+function _stanford_r25_secgroup_id($secgroup) {
+    $groupid = 0;
+    if (!empty($secgroup)) {
+        $results = _stanford_r25_api_call('secgroup', null, null, $secgroup);
+        if (!empty($results['vals'][$results['index']['R25:SECURITY_GROUP_ID'][0]]['value'])) {
+            $groupid = intval($results['vals'][$results['index']['R25:SECURITY_GROUP_ID'][0]]['value']);
+        }
+    }
+    return $groupid;
 }
 
 // delete a room from a Delete button on the edit form (currently disabled)

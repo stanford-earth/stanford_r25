@@ -106,7 +106,7 @@ function stanford_r25_room_info_form($form, &$form_state, $room_info = '')
         $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
     }
     if (!empty($room_info['layout_capacity'])) {
-        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['layout_capacity'] . '</div>';
+        $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['capacity'] . '</div>';
     }
     if (!empty($room_info['layout_features'])) {
         $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features'] . '</div>';
@@ -323,16 +323,36 @@ function stanford_r25_reservation_submit($form, &$form_state)
         unset($form_state['storage']['stanford_r25_booking']);
         return;
     }
-
-    $xml_file = '/stanford_r25_reserve.xml';
-    if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE && intval($form_state['storage']['stanford_r25_booking']['room']['approver_id']) > 0) {
-        $xml_file = '/stanford_r25_reserve_todo.xml';
-        //$result = _stanford_r25_api_call('security', null, null, 209);
+    
+    $secgroup_id = intval($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id']);
+    $mail_list = '';
+    $todo_insert = '';
+    if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE && $secgroup_id > 0) {
+        $todo_str = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_todo.xml');
+        $result = _stanford_r25_api_call('r25users', null, null, $secgroup_id);
+        if (!empty($result['index']['R25:CONTACT_ID'])) {
+            foreach ($result['index']['R25:CONTACT_ID'] as $key => $value) {
+                if (!empty($result['vals'][$value]['value'])) {
+                    $todo_temp = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'],$todo_str);
+                    $todo_temp = str_replace('[r25_approver_id]', $result['vals'][$value]['value'],$todo_temp);
+                    $todo_temp = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $todo_temp);
+                    $todo_insert .= $todo_temp;
+                }
+            }
+        }
+        if (!empty($result['index']['R25:PRIMARY_EMAIL'])) {
+            foreach ($result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
+                if (!empty($result['vals'][$value]['value'])) {
+                    if (!empty($mail_list)) $mail_list .= ', ';
+                    $mail_list .= $result['vals'][$value]['value'];
+                }
+            }
+        }
     }
-    // to do: change approver to security group
 
     // get the XML template for creating an event and replace tokens with data for this reservation
     $event_state = $event_state - 1;
+    $xml_file = '/stanford_r25_reserve.xml';
     $xml = file_get_contents(drupal_get_path('module', 'stanford_r25') . $xml_file); //'/stanford_r25_reserve.xml');
     $xml = str_replace('[r25_event_name]', $form_state['values']['stanford_r25_booking_reason'], $xml);
     $xml = str_replace('[r25_parent_id]', variable_get('stanford_r25_parent_event_id', 'unknown'), $xml);
@@ -343,8 +363,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
     $xml = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $xml);
     $xml = str_replace('[r25_end_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['end'], $xml);
     $xml = str_replace('[r25_space_id]', $form_state['storage']['stanford_r25_booking']['room']['space_id'], $xml);
-    $xml = str_replace('[r25_approver_id]', $form_state['storage']['stanford_r25_booking']['room']['approver_id'],$xml);
-    $xml = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $xml);
+    $xml = str_replace('[r25_todo]',$todo_insert, $xml);
     global $user;
     $xml = str_replace('[r25_created_by]', '<span>Self service reservation made by ' . $user->name . ' - <a href="mailto:' . $user->mail . '">click to contact by email.</a></span>', $xml);
 
@@ -371,7 +390,6 @@ function stanford_r25_reservation_submit($form, &$form_state)
             }
         }
     }
-    //if ($user->mail == 'ksharp@stanford.edu') $success = false;
     if ($success) {
 
         // if the booking was successful, format and display a message to that effect
@@ -384,7 +402,8 @@ function stanford_r25_reservation_submit($form, &$form_state)
         drupal_set_message($msg);
 
         // send an email about the booking if mail list is set
-        $mail_list = $form_state['storage']['stanford_r25_booking']['room']['email_list'];
+        if (!empty($mail_list) && !empty($form_state['storage']['stanford_r25_booking']['room']['email_list'])) $mail_list .= ', ';
+        $mail_list .= $form_state['storage']['stanford_r25_booking']['room']['email_list'];
         $body = array();
         $body[] = "A " . $result['vals'][$result['index']['R25:STATE_NAME'][0]]['value'] . " reservation has been made";
         $subject = '';
