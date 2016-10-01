@@ -33,3 +33,7 @@
     width: 150px;
     padding-right: 15px;
 }
+
+.se3-hide {
+    display: none;
+}
