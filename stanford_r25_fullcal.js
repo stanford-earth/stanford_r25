@@ -46,7 +46,7 @@ var qtip = false;  // assume we don't have the qtip library to start
         var stanford_r25_room = Drupal.settings.stanfordR25Room;
 
         // allow the use of qtip if available and the user's permissions and the room's settings are appropos.
-        if (Drupal.settings.stanfordR25Qtip == 'qtip' && Drupal.settings.stanfordR25Access == 1 && Drupal.settings.stanfordR25Status > 1) {
+        if (Drupal.settings.stanfordR25Qtip == 'qtip' && Drupal.settings.stanfordR25Access == 1 && Drupal.settings.stanfordR25Status > 0) {
             qtip = true;
         }
         var stanford_r25_status = Drupal.settings.stanfordR25Status;

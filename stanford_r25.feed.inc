@@ -59,58 +59,49 @@ function _stanford_r25_feed()
         if (user_is_logged_in()) {
             // find out if event was *not* scheduled by QuickBook account and then get the scheduler
             $quickbook_id = intval(variable_get('stanford_r25_credential_contact_id','0'));
-            foreach ($results['index']['R25:ROLE_NAME'] as $key => $value) {
-                if ($results['vals'][$value]['value'] == 'Scheduler') {
-                    if (isset($results['vals'][$results['index']['R25:CONTACT_ID'][$key]]['value'])) {
-                        if (intval($results['vals'][$results['index']['R25:CONTACT_ID'][$key]]['value']) != $quickbook_id) {
-                            $text = '';
-                            if (isset($results['vals'][$results['index']['R25:CONTACT_NAME'][$key]]['value'])) {
-                                $text = 'Reservation scheduled in 25Live by ' .
-                                    $results['vals'][$results['index']['R25:CONTACT_NAME'][$key]]['value'] . '.';
-                            }
-                            if (isset($results['vals'][$results['index']['R25:EMAIL'][$key]]['value'])) {
-                                $email = $results['vals'][$results['index']['R25:EMAIL'][$key]]['value'];
-                                if (empty($text)) {
-                                    $text = 'Reservation scheduled in 25Live by ' . $email . '.';
-                                }
-                                $text .= '&nbsp;<a href="mailto:' . $email . '">Click to contact scheduler by email</a>.';
-                            }
-                            if (empty($text)) $text = 'Scheduler is unknown.';
-                            $index = count($items);
-                            while ($index) {
-                                $index -= 1;
-                                if (intval($value) > intval($items[$index]['index'])) {
-                                    $items[$index]['scheduled_by'] = $text;
-                                    break;
-                                }
-                            }
+            foreach ($results['index']['R25:SCHEDULER_ID'] as $key => $value) {
+                if (intval($results['vals'][$value]['value']) != $quickbook_id) {
+                    $text = '';
+                    if (isset($results['vals'][$results['index']['R25:SCHEDULER_ID'][$key]]['value'])) {
+                        $text = 'Reservation scheduled in 25Live by ' .
+                            $results['vals'][$results['index']['R25:SCHEDULER_NAME'][$key]]['value'] . '.';
+                    }
+                    if (isset($results['vals'][$results['index']['R25:SCHEDULER_EMAIL'][$key]]['value'])) {
+                        $email = $results['vals'][$results['index']['R25:SCHEDULER_EMAIL'][$key]]['value'];
+                        if (empty($text)) {
+                            $text = 'Reservation scheduled in 25Live by ' . $email . '.';
+                        }
+                        $text .= '&nbsp;<a href="mailto:' . $email . '">Click to contact scheduler by email</a>.';
+                    }
+                    if (empty($text)) $text = 'Scheduler is unknown.';
+                    $index = count($items);
+                    while ($index) {
+                        $index -= 1;
+                        if (intval($value) > intval($items[$index]['index'])) {
+                            $items[$index]['scheduled_by'] = $text;
+                            break;
                         }
                     }
                 }
             }
+
             // for those items that were scheduled by quickbook, the event description contains the scheduler.
             // also, certain rooms may want to show the description as the FullCalendar event title
-            foreach ($results['index']['R25:TEXT_TYPE_ID'] as $key => $value) {
-                if ($results['vals'][$value]['value'] === "1") {
-                    $text = '';
-                    if (isset($results['index']['R25:TEXT'][$key])) {
-                        $text = $results['vals'][$results['index']['R25:TEXT'][$key]]['value'];
-                    }
-                    if (!empty($text)) {
-                        //$index = count($results['index']['R25:RESERVATION_ID']);
-                        $index = count($items);
-                        while ($index) {
-                            $index -= 1;
-                            //if (intval($value) > intval($results['index']['R25:RESERVATION_ID'][$index])) {
-                            if (intval($value) > intval($items[$index]['index'])) {
-                                // display event description as event title if room is so marked
-                                if (isset($rooms[$_POST['room_id']]['description_as_title']) &&
-                                    intval($rooms[$_POST['room_id']]['description_as_title']) == 1) {
-                                        $items[$index]['title'] = drupal_html_to_text($text);
-                                }
-                                $items[$index]['description'] = $text;
-                                break;
+            foreach ($results['index']['R25:EVENT_DESCRIPTION'] as $key => $value) {
+                $text = '';
+                $text = $results['vals'][$results['index']['R25:EVENT_DESCRIPTION'][$key]]['value'];
+                if (!empty($text)) {
+                    $index = count($items);
+                    while ($index) {
+                        $index -= 1;
+                        if (intval($value) > intval($items[$index]['index'])) {
+                            // display event description as event title if room is so marked
+                            if (isset($rooms[$_POST['room_id']]['description_as_title']) &&
+                                intval($rooms[$_POST['room_id']]['description_as_title']) == 1) {
+                                $items[$index]['title'] = drupal_html_to_text($text);
                             }
+                            $items[$index]['description'] = $text;
+                            break;
                         }
                     }
                 }

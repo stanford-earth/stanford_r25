@@ -359,8 +359,8 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             $xml_command = 'image?image_id=' . $post_data;
             break;
         case 'feed':
-            $xml_command = 'reservations.xml?' . $post_data;
-            //$xml_command = 'rm_reservations.xml?' . $post_data;
+            //$xml_command = 'reservations.xml?' . $post_data;
+            $xml_command = 'rm_reservations.xml?include=related&' . $post_data;
             break;
         case 'delete':
             $xml_command = 'event.xml?event_id=' . $post_data;
