@@ -6,6 +6,10 @@ var qtip = false;  // assume we don't have the qtip library to start
 
     $(document).ready(function () {
 
+        $("#stanford-r25-reservation").on('submit', function(e){
+            $('.form-submit').attr('disabled','disabled');
+        });
+
         // set the date field in the reserve form as the initial focus for the form
         $('#edit-stanford-r25-booking-date-datepicker-popup-0').focus();
 

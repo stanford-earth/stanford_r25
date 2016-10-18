@@ -52,16 +52,6 @@ function _stanford_r25_credentials($form, &$form_state)
         '#required' => false,
     );
 
-/*
-    $form['stanford_r25_base_image_url'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Base Image URL'),
-        '#description' => t('Base Image URL to retrieve room images without credentials.'),
-        '#default_value' => variable_get('stanford_r25_base_image_url', 'https://25live.collegenet.com/25live/data/stanford/run'),
-        '#required' => false,
-    );
-*/
-    $fullcalendar_str = '';
     if (libraries_get_path('fullcalendar') === false) {
         $fullcalendar_str = 'You do not have the FullCalendar library installed, so you will not be able to set up self-service bookings. You can download the library from http://fullcalendar.io.';
     } else {
@@ -70,7 +60,7 @@ function _stanford_r25_credentials($form, &$form_state)
     $form['fullcal_msg'] = array(
         '#markup' => '<p>' . t($fullcalendar_str) . '</p>',
     );
-    $qtip_str = '';
+
     if (libraries_get_path('jquery.qtip') === false) {
         $qtip_str = 'You do not have the qTip library installed, so we won\'t be able to display extra information about bookings on the FullCalendar display. You can download the library from  http://qtip2.com.';
     } else {
@@ -134,12 +124,6 @@ function _stanford_r25_credentials_submit($form, &$form_state)
     }
     variable_set('stanford_r25_base_url', $base_url);
 
-    /*
-    if (isset($form_state['values']['stanford_r25_base_image_url'])) {
-        variable_set('stanford_r25_base_image_url', $form_state['values']['stanford_r25_base_image_url']);
-    }
-    */
-
     if (isset($form_state['values']['stanford_r25_room_image_directory'])) {
         variable_set('stanford_r25_room_image_directory', $form_state['values']['stanford_r25_room_image_directory']);
     }
@@ -166,7 +150,8 @@ function _stanford_r25_settings($form, &$form_state)
     $form['codes'] = array(
         '#type' => 'fieldset',
         '#title' => '25Live Codes',
-        '#description' => t('Various codes for your department that need to be sent along with room requests.'),
+        '#description' => t('Various codes for your department that need to be sent along with room requests. ' .
+            'This module currently only reserves rooms with the single org id and event type code specified here.'),
     );
     $form['codes']['stanford_r25_org_id'] = array(
         '#type' => 'textfield',
@@ -186,17 +171,59 @@ function _stanford_r25_settings($form, &$form_state)
         '#default_value' => variable_get('stanford_r25_parent_event_id'),
         '#required' => true,
     );
-    $form['stanford_r25_login_msg'] = array(
+    $form['login'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Booking Restrictions based on Drupal roles and permissions',
+        '#description' => t('Use the "Book R25 Rooms" permission to restrict room reservations to specific roles. If '.
+            'anonymous users do not permission to book, the login link specified here will appear in place of the ' .
+            'booking form.'),
+    );
+    $form['login']['stanford_r25_login_msg'] = array(
         '#type' => 'textfield',
         '#title' => t('Anonymous User Login Message'),
         '#description' => t('Potentially helpful reminder for anonymous users that may need to log in before being able to reserve rooms.'),
         '#default_value' => variable_get('stanford_r25_login_msg', 'Reserve this room'),
     );
-    $form['stanford_r25_login_uri'] = array(
+    $form['login']['stanford_r25_login_uri'] = array(
         '#type' => 'textfield',
         '#title' => t('Login URL'),
         '#description' => t('Login URI for the reservation form if user is anonymous. Login message field must be set for this to show. Defaults to /user/login'),
         '#default_value' => variable_get('stanford_r25_login_uri', '/user/login'),
+    );
+    $form['login']['login_contact_info'] = array(
+        '#type' => 'markup',
+        '#markup' => 'Contact information for room reservations will consist of the user account name and email ' .
+            'address unless it is overridden by an implementation of hook_stanford_r25_drupal_contact(&$contact_string). '.
+            'If multiple modules implement the hook, the value will be set by the last module invoked.',
+    );
+    $form['external'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Advanced Restrictions',
+        '#description' => t('If you need to allow room reservations by users who authenticate through an external ' .
+            'system but who do not get get Drupal accounts (for example, rooms bookable by entire campus versus ' .
+            'rooms bookable only within the organization for which there are Drupal accounts) you must implement ' .
+            'blah blah blah.'),
+        '#collapsible' => true,
+        '#collapsed' => true,
+    );
+    $form['external']['stanford_r25_ext_login_msg'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Unauthenticated User Login Message'),
+        '#description' => t('Potentially helpful reminder for anonymous users that may need to log in before being able to reserve rooms.'),
+        '#default_value' => variable_get('stanford_r25_ext_login_msg', ''),
+    );
+    $form['external']['stanford_r25_ext_login_uri'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Unauthenticated User Login URL'),
+        '#description' => t('Login URI for the reservation form if user is unauthenticated. Login message field must be ' .
+            'set for this to show. Defaults to empty. Stanford users may want to blah-de-blah.'),
+        '#default_value' => variable_get('stanford_r25_ext_login_uri', ''),
+    );
+    $form['external']['external_contact_info'] = array(
+        '#type' => 'markup',
+        '#markup' => 'Contact information for room reservations will blank unless ' .
+            'it is set by an implementation of hook_stanford_r25_external_contact(&$contact_string). '.
+            'If multiple modules implement the hook, the value will be set by the last module invoked.',
     );
     $default_not_permitted = variable_get('stanford_r25_notpermitted_msg',
         array('value' => '', 'format' => filter_default_format()));
@@ -279,6 +306,12 @@ function _stanford_r25_settings_submit($form, &$form_state)
     }
     if (isset($form_state['values']['stanford_r25_login_uri'])) {
         variable_set('stanford_r25_login_uri', $form_state['values']['stanford_r25_login_uri']);
+    }
+    if (isset($form_state['values']['stanford_r25_ext_login_msg'])) {
+        variable_set('stanford_r25_ext_login_msg', $form_state['values']['stanford_r25_ext_login_msg']);
+    }
+    if (isset($form_state['values']['stanford_r25_ext_login_uri'])) {
+        variable_set('stanford_r25_ext_login_uri', $form_state['values']['stanford_r25_ext_login_uri']);
     }
     if (isset($form_state['values']['stanford_r25_notpermitted_msg'])) {
         variable_set('stanford_r25_notpermitted_msg',
@@ -385,7 +418,9 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
             'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'max_hours' => 2,
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
-            'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0);
+            'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
+            'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
+            'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
         '#title' => t('Display Name'),
@@ -501,6 +536,47 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $config['email_list'],
         '#description' => t('Comma-separated list of email addresses which should receive notification of any reservation requests. Leave blank for "none".'),
     );
+    $form['advanced'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Advanced Options'),
+        '#description' => t('Some uncommonly used options.'),
+        '#collapsible' => true,
+        '#collapsed' => true,
+    );
+    $form['advanced']['authentication'] = array(
+        '#type' => 'radios',
+        '#title' => t('Authentication Method'),
+        '#default_value' => $config['authentication'],
+        '#options' => array(1 => 'Internal (Drupal) Accounts', 2 => 'Non-Drupal Login'),
+        '#description' => t('Whether the room is bookable based on Drupal accounts, roles, and permissions or through external means.'),
+    );
+    $form['advanced']['multi_day'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Allow multi-day reservations'),
+        '#description' => t('Start time will refer to first day; end-time will refer to last day; days in-between will be full days.'),
+        '#default_value' => $config['multi_day'],
+    );
+    $form['advanced']['event_attributes'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Event Attributes'),
+        '#default_value' => $config['event_attributes'],
+        '#description' => t('If custom attribute fields need to be included on the reservation form, enter their R25 ' .
+            'id codes as a comma-separated list.'),
+    );
+    $form['advanced']['contact_attr'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Contact Attribute'),
+        '#default_value' => $config['contact_attr'],
+        '#description' => t("Event Custom Attribute in which we will store the user's contact information."),
+    );
+    $default_booking_instr = $config['override_booking_instructions'];
+    $form['advanced']['override_booking_instructions'] = array(
+        '#type' => 'text_format',
+        '#title' => t('Override Booking Instructions'),
+        '#description' => t('Instructions that will appear below room reservation forms if different from site default.'),
+        '#default_value' => $default_booking_instr['value'],
+        '#format' => $default_booking_instr['format'],
+    );
     $form['created'] = array(
         '#title' => t('Created on'),
         '#type' => 'textfield',
@@ -571,6 +647,15 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'honor_blackouts' => (int)$form_state['values']['honor_blackouts'],
         'approver_secgroup_name' => (string)$form_state['values']['approver_secgroup_name'],
         'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
+        'authentication' => (int)$form_state['values']['authentication'],
+        'multi_day' => (int)$form_state['values']['multi_day'],
+        'override_booking_instructions' => array(
+            'value' => $form_state['values']['override_booking_instructions']['value'],
+            'format' => $form_state['values']['override_booking_instructions']['format']),
+        'event_attributes' => (string)$form_state['values']['event_attributes'],
+        'event_attribute_fields' => _stanford_r25_update_event_attribute_fields($form_state['values']['event_attributes']),
+        'contact_attr' => (string)$form_state['values']['contact_attr'],
+        'contact_attr_field' => _stanford_r25_update_event_attribute_fields($form_state['values']['contact_attr'],true),
     );
     _stanford_r25_room_config_save($fields);
     $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';
@@ -645,6 +730,26 @@ function _stanford_r25_secgroup_id($secgroup) {
         }
     }
     return $groupid;
+}
+
+function _stanford_r25_update_event_attribute_fields($attr_list, $contact = false)
+{
+    $field_info = array();
+    if (!empty($attr_list)) {
+        $attrs = explode(",",$attr_list);
+        foreach ($attrs as $attr) {
+            $attr_id = trim($attr);
+            $results = _stanford_r25_api_call('evatrb', null, null, $attr_id);
+            if ($results) {
+                $field_info[$attr_id] = array(
+                    'name' => empty($results['index']['R25:ATTRIBUTE_NAME'][0]) ? null : $results['vals'][$results['index']['R25:ATTRIBUTE_NAME'][0]]['value'],
+                    'type' => empty($results['index']['R25:ATTRIBUTE_TYPE'][0]) ? null : $results['vals'][$results['index']['R25:ATTRIBUTE_TYPE'][0]]['value'],
+                    'contact' => $contact,
+                );
+            }
+        }
+    }
+    return $field_info;
 }
 
 // delete a room from a Delete button on the edit form (currently disabled)
