@@ -210,8 +210,17 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#value' => t('Reserve'),
     );
     // display some reservation instructions if available
-    $booking_instr = variable_get('stanford_r25_booking_instructions',array('value' => '', 'format' => null));
-    $booking_instr['value'] = str_replace('[max_duration]',$max_hours,$booking_instr['value']);
+    if (!empty($rooms[$room]['override_booking_instructions']['value'])) {
+        $booking_instr = $rooms[$room]['override_booking_instructions'];
+    } else {
+        $booking_instr = variable_get('stanford_r25_booking_instructions', array(
+          'value' => '',
+          'format' => NULL
+        ));
+    }
+    if (!empty($booking_instr['value'])) {
+        $booking_instr['value'] = str_replace('[max_duration]', $max_hours, $booking_instr['value']);
+    }
     $form['r25_instructions'] = array(
         '#type' => 'markup',
         '#markup' => check_markup($booking_instr['value'],$booking_instr['format']),

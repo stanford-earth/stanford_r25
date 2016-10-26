@@ -6,7 +6,8 @@ var qtip = false;  // assume we don't have the qtip library to start
 
     $(document).ready(function () {
 
-        $("#stanford-r25-reservation").on('submit', function(e){
+	// try to prevent double form-submits when user double-clicks
+        $("#stanford-r25-reservation").submit(function(e){
             $('.form-submit').attr('disabled','disabled');
         });
 
