@@ -664,17 +664,26 @@ function _stanford_r25_room_config_submit($form, &$form_state)
 function _stanford_r25_update_room_info($space_id = null)
 {
     $room_info = array();
+    $default_layout = 0;
     if (!empty($space_id)) {
         $results = _stanford_r25_api_call('roominfo', null, null, $space_id);
         if ($results) {
-            $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][0]) ? null : $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][0]]['value'];
+            if (!empty($results['index']['R25:DEFAULT_LAYOUT']) && is_array($results['index']['R25:DEFAULT_LAYOUT'])) {
+                foreach ($results['index']['R25:DEFAULT_LAYOUT'] as $dlkey => $dlval) {
+                    if ($results['vals'][$dlval]['value'] == 'T') {
+                        $default_layout = $dlkey;
+                        break;
+                    }
+                }
+            }
+            $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][$default_layout]) ? null :
+                $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][$default_layout]]['value'];
             $room_info['comments'] = empty($results['index']['R25:COMMENTS'][0]) ? null : $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
-            $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][0])? null : $results['vals'][$results['index']['R25:LAYOUT_NAME'][0]]['value'];
-            $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][0]) ?
-		null : 
-		empty($results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value']) ?
-		    null :
-                    $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][0]]['value'];
+            $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][$default_layout])? null :
+                $results['vals'][$results['index']['R25:LAYOUT_NAME'][$default_layout]]['value'];
+            $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]) ? null :
+		        empty($results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]]['value']) ? null :
+                    $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]]['value'];
             $layout_features = '';
             $first_feature = true;
             if (!empty($results['index']['R25:FEATURE_NAME'][0])) {
@@ -701,8 +710,8 @@ function _stanford_r25_update_room_info($space_id = null)
             $photo_id = null;
             $image_directory = variable_get('stanford_r25_room_image_directory',null);
             if (!empty($image_directory) &&
-                !empty($results['index']['R25:LAYOUT_PHOTO_ID'][0])) {
-                $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['value'];
+                !empty($results['index']['R25:LAYOUT_PHOTO_ID'][$default_layout])) {
+                $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][$default_layout]]['value'];
                 $photo = _stanford_r25_api_call('roomphoto', null, null, $photo_id);
                 if ($photo) {
                     $destination = _stanford_r25_file_path($photo_id);
