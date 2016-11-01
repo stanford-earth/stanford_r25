@@ -204,18 +204,22 @@ function stanford_r25_block_view($delta = "")
             } else {
                 // see if the current user has access to book room
                 $can_book = false;
-                $external_account_info = array();
+
+                // if the room requires external authentication, see if we have a valid user
+                $external_module = '';
+                $external_acct = false;
                 if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT) {
-                    // find out if we have an externally authenticated user, and get user's contact info from hook
-                    $extern = module_invoke_all('stanford_r25_external_account');
-                    if (!empty($extern) && is_array($extern)) {
-                        foreach ($extern as $extern_acct) {
-                            if (!empty($extern_acct) && is_array($extern_acct)) {
-                                if (!empty($extern_acct['id'])) {
-                                    $can_book = true;
-                                    $external_account_info[] = $extern_acct;
-                                }
-                            }
+                    // see if any modules implement the stanford_r25_external_user hook
+                    $externs = module_implements('stanford_r25_external_user');
+                    if (is_array($externs) && !empty($externs)) {
+                        // if so, just use the first one returned
+                        $external_module = $externs[0];
+                        // call the stanford_r25_external_user hook for the module found
+                        // it will return an array of user info if okay, or false if not
+                        $extern_acct = module_invoke($external_module,'stanford_r25_external_user');
+                        if (!empty($extern_acct)) {
+                            // we got back a non-empty array, so assume an authenticated user who can book the room
+                            $can_book = true;
                         }
                     }
                 } else if (user_access('book r25 rooms')) {
@@ -225,22 +229,23 @@ function stanford_r25_block_view($delta = "")
                 // with its max capacity. If we don't know its max capacity, set it to 5
                 if ($can_book) {
                     $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
-                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_account_info);
+                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_acct);
                     $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                     $block['content'] = drupal_render($form);
-
+                // otherwise, if this room authenticates externally, get the auth link from the external auth module
                 } else if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT) {
-                    $block['subject'] = '';
-                    $login_msg = variable_get('stanford_r25_login_msg', 'Authenticate');
-                    global $base_url;
-                    $destination = drupal_get_destination();
-                    $destination_url = str_replace('http:', 'https:', $base_url) . '/' .
-                        $destination['destination'] . '#stanford-r25-reservation';
-                    $login_msg = variable_get('stanford_r25_ext_login_msg', '');
-                    $login_uri = variable_get('stanford_r25_ext_login_uri', '');
-                    $block['content'] = l($login_msg, $login_uri, array('query' => array(
-                        'destination' => $destination_url), 'attributes' => array(
-                        'class' => array('btn', 'btn-giving'))));
+                    // present the user with an authentication link to access the room reservation form
+                    // but if no module implementing the hook was found we need to put up a message
+                    if (empty($external_module)) {
+                        $block['subject'] = '';
+                        $block['content'] = 'This room requires external authentication, but no login link was found.';
+                    } else {
+                        $block['subject'] = '';
+                        $login_msg = variable_get('stanford_r25_login_msg', 'Authenticate');
+                        $block['content'] = module_invoke($external_module, 'stanford_r25_external_link', $login_msg);
+                    }
+                // otherwise, access to reserve room is based on Drupal permissions so offer a login link if
+                // user is anonymous, or a 'no access' message if user is logged in
                 } else {
                     // if the user has no reservation permission and is logged in, then print a "no access" message
                     // otherwise the user is anonymous so display the login link,
