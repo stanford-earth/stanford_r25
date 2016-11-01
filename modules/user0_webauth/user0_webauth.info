@@ -1,0 +1,5 @@
+name = Webauth for anonymous Drupal user
+description = authenticates Stanford users through apache mod_webauth w/o creating Drupal accounts
+package = Stanford
+version = 7.x-0.9
+core = 7.x

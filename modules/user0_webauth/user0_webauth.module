@@ -1,0 +1,71 @@
+<?php
+
+function _user0_webauth_tmp_directory() {
+  $base_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php'));
+  return $base_path . conf_path() . '/user0_webauth/tmp';
+}
+
+// implement hook_stanford_r25_link
+function user0_webauth_stanford_r25_external_link($link_text = 'Authenticate') {
+
+  global $base_url, $base_path, $cookie_domain;
+  $secure_base_url = str_replace('http:', 'https:', $base_url) . '/';
+  $user0_webauth_url = $secure_base_url . conf_path() . 
+    '/user0_webauth/user0_webauth.php';
+  $destination = drupal_get_destination();
+  $options = array('attributes'=>array('class'=>array('button')),
+    'query'=>array(
+      'base_path' => $base_path,
+      'cookie_domain' => $cookie_domain,
+      'destination' => $destination['destination']));
+  return l($link_text, $user0_webauth_url, $options);
+}
+
+// implement hook stanford_r25_external_user
+function user0_webauth_stanford_r25_external_user() {
+  $return_data = false;
+  if (!empty($_COOKIE['user0_webauth'])) {
+    $filename = _user0_webauth_tmp_directory() . '/' . $_COOKIE['user0_webauth'];
+    $user0_info = array();
+    if (file_exists($filename) && time()-filemtime($filename) < 36000) {
+      $user0_info = json_decode(file_get_contents($filename),true);
+    }
+    $destination = empty($user0_info['WEBAUTH_LDAP_DESTINATION']) ? null :
+        $user0_info['WEBAUTH_LDAP_DESTINATION'];
+    $curr_path = current_path();
+    if (empty($user0_info) || empty($user0_info['WEBAUTH_LDAP_UID'])) {
+      watchdog('stanford_r25','External login failed. Missing data file or uid.');
+      @unlink($filename);
+    } else if (strcmp($destination,$curr_path) !== 0) {
+      watchdog('stanford_r25','External login failed. Destination mismatch.');
+      @unlink($filename);
+    } else {
+      $return_data = array();
+      foreach ($user0_info as $key => $value) {
+        $new_key = str_replace('WEBAUTH_LDAP', 'R25_EXTERNAL', $key);
+        $return_data[$new_key] = $value;
+      }
+    }
+  }
+  return $return_data;
+}
+
+function user0_webauth_cron() {
+        
+    // cleanup old tmp files
+    $seconds_old = 36000;
+    $directory = _user0_webauth_tmp_directory();
+            
+    if( !$dirhandle = @opendir($directory) )
+        return;
+
+    while( false !== ($filename = readdir($dirhandle)) ) {
+        if( $filename != "." && $filename != ".." ) {
+            $filename = $directory. "/". $filename;
+            if( @filemtime($filename) < (time()-$seconds_old) ) {
+                @unlink($filename);
+            }
+        }
+    }
+}
+

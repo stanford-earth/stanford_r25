@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * Implementation of hook_install
+ */
+function user0_webauth_install() {
+
+  // build the desired path for our authentication script  
+  $user0_webauth_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php')) .
+    conf_path() . '/user0_webauth';
+
+  // Set .htaccess file location
+  $user0_webauth_htaccess = $user0_webauth_path . '/.htaccess';
+
+  // If user0_webauth dir doesn't exist yet, create it.
+  if (@is_dir($user0_webauth_path) === FALSE) {
+    // Create dir.
+    @mkdir($user0_webauth_path, 0755);
+  }
+
+  // Copy necessary check.php file over.
+  $default_redirect_file = drupal_get_path('module', 'user0_webauth') . '/default/user0_webauth.php';
+  copy($default_redirect_file, $user0_webauth_path . '/user0_webauth.php');
+  // Copy .htaccess file to location.
+  $htaccess_file = drupal_get_path('module', 'user0_webauth') . '/default/htaccess.txt';
+  copy($htaccess_file, $user0_webauth_htaccess);
+
+  //create webauth_tmp if necessary
+  $user0_webauth_tmp_path = $user0_webauth_path . '/tmp';
+  if (@is_dir($user0_webauth_tmp_path) === FALSE) {
+    // create dir
+    mkdir($user0_webauth_tmp_path, 0775);
+    // create deny all .htaccess file
+    $fp = fopen($user0_webauth_tmp_path . '/.htaccess','w');
+    fwrite($fp, 'deny from all');
+    fclose($fp);
+  }
+
+}
+
+/**
+ * Implemention of hook_uninstall
+ */ 
+function user0_webauth_uninstall() {
+
+    // remove our webauth subdirectory
+    $webauth_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php')) . conf_path() . '/user0_webauth';
+    @unlink($webauth_path.'/user0_webauth.php');
+    @unlink($webauth_path.'/.htaccess');
+    $webauth_tmp_path = $webauth_path . '/tmp';
+    @unlink($webauth_tmp_path.'/.htaccess');
+    $wa_glob = glob($webauth_tmp_path.'/*');
+    if (!empty($wa_glob)) array_map("unlink", $wa_glob);
+    @rmdir($webauth_tmp_path);
+    @rmdir($webauth_path);
+}
