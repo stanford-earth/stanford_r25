@@ -5,17 +5,13 @@ AuthType WebAuth
 require valid-user
 WebAuthOptional off
 
-WebAuthLdapAttribute displayName
-WebAuthLdapAttribute suAffiliation
-WebAuthLdapAttribute mail
-WebAuthLdapAttribute sudisplaynamefirst
-WebAuthLdapAttribute sudisplaynamemiddle
-WebAuthLdapAttribute sudisplaynamelast
-WebAuthLdapAttribute telephonenumber
-WebAuthLdapAttribute postaladdress
-WebAuthLdapAttribute facsimiletelephonenumber
 WebAuthLdapAttribute uid
-WebAuthLdapAttribute title
+WebAuthLdapAttribute displayName
+WebAuthLdapAttribute ou
+WebAuthLdapAttribute mail
+WebAuthLdapAttribute telephonenumber
+WebAuthLdapAttribute facsimiletelephonenumber
+WebAuthLdapAttribute postaladdress
 
 WebAuthLdapPrivgroup stanford:student
 WebAuthLdapPrivgroup stanford:staff
