@@ -13,7 +13,7 @@ function user0_webauth_stanford_r25_external_link($link_text = 'Authenticate') {
   $user0_webauth_url = $secure_base_url . conf_path() . 
     '/user0_webauth/user0_webauth.php';
   $destination = drupal_get_destination();
-  $options = array('attributes'=>array('class'=>array('button')),
+  $options = array('attributes'=>array('class'=>array('button','btn-giving')),
     'query'=>array(
       'base_path' => $base_path,
       'cookie_domain' => $cookie_domain,
@@ -30,15 +30,15 @@ function user0_webauth_stanford_r25_external_user() {
     if (file_exists($filename) && time()-filemtime($filename) < 36000) {
       $user0_info = json_decode(file_get_contents($filename),true);
     }
-    $destination = empty($user0_info['WEBAUTH_LDAP_DESTINATION']) ? null :
-        $user0_info['WEBAUTH_LDAP_DESTINATION'];
-    $curr_path = current_path();
+    //$destination = empty($user0_info['WEBAUTH_LDAP_DESTINATION']) ? null :
+    //    $user0_info['WEBAUTH_LDAP_DESTINATION'];
+    //$curr_path = current_path();
     if (empty($user0_info) || empty($user0_info['WEBAUTH_LDAP_UID'])) {
       watchdog('stanford_r25','External login failed. Missing data file or uid.');
       @unlink($filename);
-    } else if (strcmp($destination,$curr_path) !== 0) {
-      watchdog('stanford_r25','External login failed. Destination mismatch.');
-      @unlink($filename);
+    //} else if (strcmp($destination,$curr_path) !== 0) {
+    //  watchdog('stanford_r25','External login failed. Destination mismatch.');
+    //  @unlink($filename);
     } else {
       $return_data = array();
       foreach ($user0_info as $key => $value) {
