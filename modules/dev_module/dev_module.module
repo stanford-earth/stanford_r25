@@ -1,0 +1,74 @@
+<?php
+
+function _dev_module_tmp_directory() {
+  $base_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php'));
+  return $base_path . conf_path() . '/dev_module/tmp';
+}
+
+function dev_module_menu() {
+    $items['dev_module_fake_login'] = array(
+        'page callback' => '_dev_module_fake_login',
+        'access arguments' => array('view r25 room calendars'),
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function _dev_module_fake_login() {
+  setcookie('dev_module','whatevs');
+    drupal_goto($_REQUEST['destination']);
+}
+
+// implement hook_stanford_r25_link
+function dev_module_stanford_r25_external_link($link_text = 'Authenticate') {
+
+  global $base_url, $base_path, $cookie_domain;
+  $secure_base_url = str_replace('http:', 'https:', $base_url) . '/';
+    $dev_module_url = 'dev_module_fake_login';
+  $destination = drupal_get_destination();
+  $options = array('attributes'=>array('class'=>array('button','btn-giving')),
+    'query'=>array(
+      'base_path' => $base_path,
+      'cookie_domain' => $cookie_domain,
+      'destination' => $destination['destination']));
+  return l($link_text, $dev_module_url, $options);
+}
+
+// implement hook stanford_r25_external_user
+function dev_module_stanford_r25_external_user() {
+    $return_data = false;
+    if (!empty($_COOKIE['dev_module'])) {
+        $return_data = array('R25_EXTERNAL_UID' => 'ksharp',
+            'R25_EXTERNAL_DISPLAYNAME' => 'Kenneth Sharp',
+            'R25_EXTERNAL_TELEPHONE' => '650-721-6406',
+            'R25_EXTERNAL_OID' => 'Stanford Earth',
+            'R25_EXTERNAL_MAIL' => 'ksharp@stanford.edu',
+        );
+    }
+  return $return_data;
+}
+
+function dev_module_stanford_r25_external_user_display($user_info) {
+    return "Organization: ".$user_info['R25_EXTERNAL_OID']."\r\nName: ".$user_info['R25_EXTERNAL_DISPLAYNAME'] .
+        "\r\nPhone: ".$user_info['R25_EXTERNAL_TELEPHONE']."\r\nMail: ".$user_info['R25_EXTERNAL_MAIL'];
+}
+
+function dev_module_cron() {
+        
+    // cleanup old tmp files
+    $seconds_old = 36000;
+    $directory = _dev_module_tmp_directory();
+            
+    if( !$dirhandle = @opendir($directory) )
+        return;
+
+    while( false !== ($filename = readdir($dirhandle)) ) {
+        if( $filename != "." && $filename != ".." ) {
+            $filename = $directory. "/". $filename;
+            if( @filemtime($filename) < (time()-$seconds_old) ) {
+                @unlink($filename);
+            }
+        }
+    }
+}
+

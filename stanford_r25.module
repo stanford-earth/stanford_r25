@@ -155,15 +155,6 @@ function stanford_r25_block_info()
     return $blocks;
 }
 
-function _stanford_r25_get_login_block($login_msg, $login_uri, $destination_url)
-{
-    return array('subject' => '',
-        'content' => l($login_msg, $login_uri, array('query' => array(
-                'destination' => $destination_url . '#stanford-r25-reservation'),
-                'attributes' => array('class' => array('btn', 'btn-giving')))
-        ));
-}
-
 /**
  * implements hook_block_view
  */
@@ -216,8 +207,8 @@ function stanford_r25_block_view($delta = "")
                         $external_module = $externs[0];
                         // call the stanford_r25_external_user hook for the module found
                         // it will return an array of user info if okay, or false if not
-                        $extern_acct = module_invoke($external_module,'stanford_r25_external_user');
-                        if (!empty($extern_acct)) {
+                        $external_acct = module_invoke($external_module,'stanford_r25_external_user');
+                        if (!empty($external_acct)) {
                             // we got back a non-empty array, so assume an authenticated user who can book the room
                             $can_book = true;
                         }
@@ -229,7 +220,8 @@ function stanford_r25_block_view($delta = "")
                 // with its max capacity. If we don't know its max capacity, set it to 5
                 if ($can_book) {
                     $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
-                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_acct);
+                    $external_display = module_invoke($external_module,'stanford_r25_external_user_display',$external_acct);
+                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display);
                     $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                     $block['content'] = drupal_render($form);
                 // otherwise, if this room authenticates externally, get the auth link from the external auth module
@@ -241,7 +233,7 @@ function stanford_r25_block_view($delta = "")
                         $block['content'] = 'This room requires external authentication, but no login link was found.';
                     } else {
                         $block['subject'] = '';
-                        $login_msg = variable_get('stanford_r25_login_msg', 'Authenticate');
+                        $login_msg = variable_get('stanford_r25_ext_login_msg', 'Authenticate');
                         $block['content'] = module_invoke($external_module, 'stanford_r25_external_link', $login_msg);
                     }
                 // otherwise, access to reserve room is based on Drupal permissions so offer a login link if

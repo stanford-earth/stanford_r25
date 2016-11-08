@@ -1,0 +1,41 @@
+<?php
+
+function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'stanford_r25_reservation') {
+    if (!empty($form['stanford_r25_booking_roomid']['#value']) && substr($form['stanford_r25_booking_roomid']['#value'],0,3) == 'mh0' ) {
+
+      $form['stanford_r25_booking_reason']['#title'] = 'Event name';
+
+      $form['stanford_r25_booking_attr176']['#title'] = 'Is the event host using Hartley for the first time?';
+      $form['stanford_r25_booking_attr176']['#description'] = 'If so, we will be in touch with additional instructions after your reservation is confirmed.';
+
+      $form['stanford_r25_booking_attr169']['#title'] = 'Will food and/or beverages be served at this event?';
+      $form['stanford_r25_booking_attr169']['#description'] = 'If so, you must acknowledge that a work order for cleanup ' .
+          'is required and must be received by the School of Earth, Energy & Environmental Sciences no less than one ' .
+          'week before the event.';
+      $form['stanford_r25_booking_attr170']['#title'] = 'I agree to provide a work order for after-event cleanup.';
+      $form['stanford_r25_booking_attr170']['#states'] = array('required' => array(
+          ':input[name="stanford_r25_booking_attr169"]' => array('checked' => TRUE),
+      ));
+
+      $form['stanford_r25_booking_attr171']['#title'] = 'Is this event billable?';
+      $form['stanford_r25_booking_attr171']['#description'] = 'Leave unchecked only if this event fits the non-billable ' .
+          'criteria found on the <a href="https://earth.stanford.edu/resources/hartley/booking-instructions">Booking '.
+          'Instructions</a> page.';
+      $form['stanford_r25_booking_attr172']['#title'] = 'University PTA number';
+      $form['stanford_r25_booking_attr172']['#description'] = 'PTA is required for billable reservations.';
+      $form['stanford_r25_booking_attr172']['#states'] = array('required' => array(
+        ':input[name="stanford_r25_booking_attr171"]' => array('checked' => TRUE),
+      ));
+      $form['stanford_r25_booking_attr173']['#title'] = 'Signature Authority';
+      $form['stanford_r25_booking_attr173']['#description'] = 'Authorizing signee is required for billable reservations.';
+      $form['stanford_r25_booking_attr173']['#states'] = array('required' => array(
+          ':input[name="stanford_r25_booking_attr171"]' => array('checked' => TRUE),
+      ));
+
+      $form['stanford_r25_booking_attr177']['#title'] = 'Description/Comments';
+      $form['stanford_r25_booking_attr177']['#description'] = 'Any information, questions or remarks about this reservation.';
+
+    }
+  }
+}

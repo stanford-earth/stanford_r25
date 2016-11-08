@@ -202,7 +202,8 @@ function _stanford_r25_settings($form, &$form_state)
         '#description' => t('If you need to allow room reservations by users who authenticate through an external ' .
             'system but who do not get get Drupal accounts (for example, rooms bookable by entire campus versus ' .
             'rooms bookable only within the organization for which there are Drupal accounts) you must implement ' .
-            'blah blah blah.'),
+            'hooks for hook_stanford_r25_external_link and hook_stanford_r25_external_user. See the included ' .
+            'user0_webauth module for an example.'),
         '#collapsible' => true,
         '#collapsed' => true,
     );
@@ -210,14 +211,7 @@ function _stanford_r25_settings($form, &$form_state)
         '#type' => 'textfield',
         '#title' => t('Unauthenticated User Login Message'),
         '#description' => t('Potentially helpful reminder for anonymous users that may need to log in before being able to reserve rooms.'),
-        '#default_value' => variable_get('stanford_r25_ext_login_msg', ''),
-    );
-    $form['external']['stanford_r25_ext_login_uri'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Unauthenticated User Login URL'),
-        '#description' => t('Login URI for the reservation form if user is unauthenticated. Login message field must be ' .
-            'set for this to show. Defaults to empty. Stanford users may want to blah-de-blah.'),
-        '#default_value' => variable_get('stanford_r25_ext_login_uri', ''),
+        '#default_value' => variable_get('stanford_r25_ext_login_msg', 'Reserve this room'),
     );
     $form['external']['external_contact_info'] = array(
         '#type' => 'markup',
@@ -309,9 +303,6 @@ function _stanford_r25_settings_submit($form, &$form_state)
     }
     if (isset($form_state['values']['stanford_r25_ext_login_msg'])) {
         variable_set('stanford_r25_ext_login_msg', $form_state['values']['stanford_r25_ext_login_msg']);
-    }
-    if (isset($form_state['values']['stanford_r25_ext_login_uri'])) {
-        variable_set('stanford_r25_ext_login_uri', $form_state['values']['stanford_r25_ext_login_uri']);
     }
     if (isset($form_state['values']['stanford_r25_notpermitted_msg'])) {
         variable_set('stanford_r25_notpermitted_msg',
@@ -561,7 +552,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#title' => t('Event Attributes'),
         '#default_value' => $config['event_attributes'],
         '#description' => t('If custom attribute fields need to be included on the reservation form, enter their R25 ' .
-            'id codes as a comma-separated list.'),
+            'id codes as a comma-separated list. Put an asterisk after a number to indicate a required field.'),
     );
     $form['advanced']['contact_attr'] = array(
         '#type' => 'textfield',
@@ -748,6 +739,9 @@ function _stanford_r25_update_event_attribute_fields($attr_list, $contact = fals
         $attrs = explode(",",$attr_list);
         foreach ($attrs as $attr) {
             $attr_id = trim($attr);
+            if (substr($attr_id,-1) == '*') {
+                $attr_id = substr($attr_id,0,strlen($attr_id)-1);
+            }
             $results = _stanford_r25_api_call('evatrb', null, null, $attr_id);
             if ($results) {
                 $field_info[$attr_id] = array(

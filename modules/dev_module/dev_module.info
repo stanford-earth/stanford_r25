@@ -1,0 +1,5 @@
+name = Fake Authentication
+description = fakes auth
+package = Stanford
+version = 7.x-0.9
+core = 7.x

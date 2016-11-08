@@ -128,7 +128,7 @@ function stanford_r25_room_info_form($form, &$form_state, $room_info = '')
 */
 
 // the reservation form callback is called by the reservation block
-function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5)
+function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5, $contact_info = array())
 {
     // keep the roomid for later processing
     $form['stanford_r25_booking_roomid'] = array(
@@ -204,6 +204,57 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#required' => true,
         '#maxlength' => 40,
     );
+
+    // check for event attribute fields, and build 'em
+    if (!empty($rooms[$room]['event_attribute_fields'])) {
+        foreach ($rooms[$room]['event_attribute_fields'] as $attr_id => $attr_info) {
+            switch ($attr_info['type']) {
+                case 'S':
+                    $field_type = 'textfield';
+                    break;
+                case 'B':
+                    $field_type = 'checkbox';
+                    break;
+                case 'X':
+                    $field_type = 'textarea';
+                    break;
+                default:
+                    $field_type = '';
+            }
+            if (!empty($field_type)) {
+                $form['stanford_r25_booking_attr'.$attr_id] = array(
+                    '#type' => $field_type,
+                    '#title' => $attr_info['name'],
+                );
+            }
+        }
+    }
+
+    if (!empty($rooms[$room]['contact_attr_field'])) {
+        foreach ($rooms[$room]['contact_attr_field'] as $attr_id => $attr_info) {
+            switch ($attr_info['type']) {
+                case 'S':
+                    $field_type = 'textfield';
+                    break;
+                case 'B':
+                    $field_type = 'checkbox';
+                    break;
+                case 'X':
+                    $field_type = 'textarea';
+                    break;
+                default:
+                    $field_type = '';
+            }
+            if (!empty($field_type)) {
+                $form['stanford_r25_contact_'.$attr_id] = array(
+                    '#type' => $field_type,
+                    '#title' => $attr_info['name'],
+                    '#default_value' => $contact_info,
+                );
+            }
+        }
+    }
+
     // submit button, d'uh
     $form['submit'] = array(
         '#type' => 'submit',

@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * Implementation of hook_install
+ */
+function dev_module_install() {
+
+  // build the desired path for our authentication script  
+  $dev_module_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php')) .
+    conf_path() . '/dev_module';
+
+  // Set .htaccess file location
+  $dev_module_htaccess = $dev_module_path . '/.htaccess';
+
+  // If dev_module dir doesn't exist yet, create it.
+  if (@is_dir($dev_module_webauth_path) === FALSE) {
+    // Create dir.
+    @mkdir($dev_module_path, 0755);
+  }
+
+  // Copy necessary check.php file over.
+  $default_redirect_file = drupal_get_path('module', 'dev_module') . '/default/dev_module.php';
+  copy($default_redirect_file, $dev_module_path . '/dev_module.php');
+  // Copy .htaccess file to location.
+  $htaccess_file = drupal_get_path('module', 'dev_module') . '/default/htaccess.txt';
+  copy($htaccess_file, $dev_module_htaccess);
+
+  //create webauth_tmp if necessary
+  $dev_module_tmp_path = $dev_module_path . '/tmp';
+  if (@is_dir($dev_module_tmp_path) === FALSE) {
+    // create dir
+    mkdir($dev_module_tmp_path, 0775);
+    // create deny all .htaccess file
+    $fp = fopen($dev_module_tmp_path . '/.htaccess','w');
+    fwrite($fp, 'deny from all');
+    fclose($fp);
+  }
+
+}
+
+/**
+ * Implemention of hook_uninstall
+ */ 
+function dev_module_uninstall() {
+
+    // remove our webauth subdirectory
+    $webauth_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php')) . conf_path() . '/dev_module';
+    @unlink($webauth_path.'/dev_module.php');
+    @unlink($webauth_path.'/.htaccess');
+    $webauth_tmp_path = $webauth_path . '/tmp';
+    @unlink($webauth_tmp_path.'/.htaccess');
+    $wa_glob = glob($webauth_tmp_path.'/*');
+    if (!empty($wa_glob)) array_map("unlink", $wa_glob);
+    @rmdir($webauth_tmp_path);
+    @rmdir($webauth_path);
+}

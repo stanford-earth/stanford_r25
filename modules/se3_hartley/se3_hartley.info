@@ -1,0 +1,5 @@
+name = SE3 Hartley Reservation Form
+description = Customizes the stanford_r25 room reservation form for Hartley
+package = Stanford
+version = 7.x-0.9
+core = 7.x
