@@ -28,6 +28,8 @@ function _stanford_r25_calendar_page($room = null)
             if (!empty($params['date'])) {
                 drupal_add_js(array('stanfordR25ParamDate' => $params['date']), 'setting');
             }
+            $multi_day = (!empty($rooms[$room]['multi_day'])) ? 1 :0;
+            drupal_add_js(array('stanfordR25MultiDay' => $multi_day), 'setting');
             if (intval($rooms[$room]['caltype']) == 1) {
                 // if the calendar is from 25Live Publisher, output the appropriate divs and javascript files
                 $output['control_div'] = array(
@@ -153,39 +155,55 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
         '#date_increment' => 30,
         '#date_year_range' => '-0:+1',
         '#required' => true,
+        '#title' => 'Start Date/Time',
     );
-    // default booking duration is limited to 2 hours in 30 minute increments
-    // but a room can have a different value
-    $max_hours = 2;
-    if (!empty($rooms[$room]['max_hours'])) {
-        $max_hours = intval($rooms[$room]['max_hours']);
-        if ($max_hours == 0) $max_hours = 24;
-    }
-    $hours_array = array();
-    if ($max_hours > 2) {
-        for ($i = 0; $i < $max_hours; $i++) {
-            $hstr = '';
-            if ($i == 0) {
-                $hours_array[] = '30 minutes';
-                $hours_array[] = '1 hour';
-            } else {
-                $hours_array[] = strval($i) . '.5 hours';
-                $hours_array[] = strval($i+1) . ' hours';
-            }
+
+    if (empty($rooms[$room]['multi_day'])) {
+        // default booking duration is limited to 2 hours in 30 minute increments
+        // but a room can have a different value
+        $max_hours = 2;
+        if (!empty($rooms[$room]['max_hours'])) {
+            $max_hours = intval($rooms[$room]['max_hours']);
+            if ($max_hours == 0) $max_hours = 24;
         }
+        $hours_array = array();
+        if ($max_hours > 2) {
+            for ($i = 0; $i < $max_hours; $i++) {
+                $hstr = '';
+                if ($i == 0) {
+                    $hours_array[] = '30 minutes';
+                    $hours_array[] = '1 hour';
+                } else {
+                    $hours_array[] = strval($i) . '.5 hours';
+                    $hours_array[] = strval($i + 1) . ' hours';
+                }
+            }
+        } else {
+            $hours_array[0] = '30 minutes';
+            $hours_array[1] = '60 minutes';
+            $hours_array[2] = '90 minutes';
+            $hours_array[3] = '120 minutes';
+        }
+        $form['stanford_r25_booking_duration'] = array(
+            '#type' => 'select',
+            '#title' => t('Duration'),
+            '#options' => $hours_array,
+            '#default_value' => 0,
+            '#required' => true,
+        );
     } else {
-        $hours_array[0] = '30 minutes';
-        $hours_array[1] = '60 minutes';
-        $hours_array[2] = '90 minutes';
-        $hours_array[3] = '120 minutes';
+        $form['stanford_r25_booking_enddate'] = array(
+            '#type' => 'date_popup',
+            '#default_value' => format_date(time(), 'custom', 'Y-m-d H:i:s'),
+            '#date_type' => DATE_DATETIME,
+            '#date_timezone' => date_default_timezone(),
+            '#date_format' => 'Y-m-d h:i a',
+            '#date_increment' => 30,
+            '#date_year_range' => '-0:+1',
+            '#required' => true,
+            '#title' => 'End Date/Time',
+        );
     }
-    $form['stanford_r25_booking_duration'] = array(
-        '#type' => 'select',
-        '#title' => t('Duration'),
-        '#options' => $hours_array,
-        '#default_value' => 0,
-        '#required' => true,
-    );
     // max headcount for a room comes from parameter passed to the function
     $form['stanford_r25_booking_headcount'] = array(
         '#type' => 'select',

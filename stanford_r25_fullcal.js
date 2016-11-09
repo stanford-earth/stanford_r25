@@ -57,9 +57,15 @@ var qtip = false;  // assume we don't have the qtip library to start
         var stanford_r25_status = Drupal.settings.stanfordR25Status;
 
         // the calendar is selectable by the user if the room is bookable and the user has access
+        var multiDay = false;
+        var selectConstraint = {start: '06:00', end: '22:00'};
         var selectable = false;
         if (parseInt(stanford_r25_status) > 1 && parseInt(Drupal.settings.stanfordR25Access) == 1) {
             selectable = true;
+            if (parseInt(Drupal.settings.stanfordR25MultiDay) == 1) {
+                multiDay = true;
+                selectConstraint = {};
+            }
         }
 
         // get the maximum selectable duration of the room
@@ -79,12 +85,11 @@ var qtip = false;  // assume we don't have the qtip library to start
             document.cookie = "stanford-r25-date=" + $('#edit-stanford-r25-booking-date-datepicker-popup-0').val();
             return true;
         });
-
         $('#calendar').fullCalendar({
             allDaySlot: false,
-            // if in month view and the user clicks a date, go to agenda day view
+            // if in month view for a non-multi-day room and the user clicks a date, go to agenda day view
             dayClick: function (date, jsEvent, view) {
-                if (view.name === "month") {
+                if (view.name === "month" && !multiDay) {
                     $('#calendar').fullCalendar('gotoDate', date);
                     $('#calendar').fullCalendar('changeView', 'agendaDay');
                 }
@@ -152,30 +157,32 @@ var qtip = false;  // assume we don't have the qtip library to start
             // in the reservation form and set the focus to the required headcount field. Also display an error alert
             // if the user tries to select more than the meximum minutes duration
             select: function (start, end) {
-                var duration = end.diff(start, 'minutes');
-                if (maxDuration > 0 && duration > maxDuration) {
-                    var maxStr = '';
-                    if (maxDuration > 120) {
-                        maxStr = (maxDuration / 60) + ' hours';
-                    } else {
-                        maxStr = maxDuration + ' minutes';
-                    }
-                    alert('Maximum booking duration is ' + maxStr + '. For longer please contact a department administrator.');
+                $('#edit-stanford-r25-booking-date-datepicker-popup-0').val(start.format('YYYY-MM-DD'));
+                $('#edit-stanford-r25-booking-date-timeEntry-popup-1').val(start.format('hh:mm a'));
+                if (multiDay) {
+                    $('#edit-stanford-r25-booking-enddate-datepicker-popup-0').val(end.format('YYYY-MM-DD'));
+                    $('#edit-stanford-r25-booking-enddate-timeEntry-popup-1').val(end.format('hh:mm a'));
                 } else {
-                    var duration_index = (duration / 30) - 1;
-                    $('#edit-stanford-r25-booking-duration').val(duration_index);
-                    $('#edit-stanford-r25-booking-date-datepicker-popup-0').val(start.format('YYYY-MM-DD'));
-                    $('#edit-stanford-r25-booking-date-timeEntry-popup-1').val(start.format('hh:mm a'));
-                    $('#edit-stanford-r25-booking-headcount').focus();
+                    var duration = end.diff(start, 'minutes');
+                    if (maxDuration > 0 && duration > maxDuration) {
+                        var maxStr = '';
+                        if (maxDuration > 120) {
+                            maxStr = (maxDuration / 60) + ' hours';
+                        } else {
+                            maxStr = maxDuration + ' minutes';
+                        }
+                        alert('Maximum booking duration is ' + maxStr + '. For longer please contact a department administrator.');
+                    } else {
+                        var duration_index = (duration / 30) - 1;
+                        $('#edit-stanford-r25-booking-duration').val(duration_index);
+                     }
                 }
+                $('#edit-stanford-r25-booking-headcount').focus();
             },
             // set whether the calendar is selectable, as defined up above
             selectable: selectable,
-            // don't let the user select across multiple days
-            selectConstraint: {
-                start: '00:01',
-                end: '23:59',
-            },
+            // don't let the user select across multiple days unless multi-day room (selectConstraint object set at top)
+            selectConstraint: selectConstraint,
             // don't let users select time slots that cross existing reservations
             selectOverlap: false,
             // set default timezone
