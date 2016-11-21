@@ -30,24 +30,24 @@ function user0_webauth_stanford_r25_external_user() {
     if (file_exists($filename) && time()-filemtime($filename) < 36000) {
       $user0_info = json_decode(file_get_contents($filename),true);
     }
-    //$destination = empty($user0_info['WEBAUTH_LDAP_DESTINATION']) ? null :
-    //    $user0_info['WEBAUTH_LDAP_DESTINATION'];
-    //$curr_path = current_path();
-    if (empty($user0_info) || empty($user0_info['WEBAUTH_LDAP_UID'])) {
+    if (empty($user0_info) || empty($user0_info['R25_EXTERNAL_UID'])) {
       watchdog('stanford_r25','External login failed. Missing data file or uid.');
       @unlink($filename);
-    //} else if (strcmp($destination,$curr_path) !== 0) {
-    //  watchdog('stanford_r25','External login failed. Destination mismatch.');
-    //  @unlink($filename);
     } else {
-      $return_data = array();
-      foreach ($user0_info as $key => $value) {
-        $new_key = str_replace('WEBAUTH_LDAP', 'R25_EXTERNAL', $key);
-        $return_data[$new_key] = $value;
-      }
+      $return_data = user_info();
     }
   }
   return $return_data;
+}
+
+function user0_webauth_stanford_r25_external_user_display($user_info) {
+    $contact = '';
+    if (!empty($user_info['R25_EXTERNAL_OU'])) $contact .= 'Organization: '.$user_info['R25_EXTERNAL_OU'] . '\r\n';
+    if (!empty($user_info['R25_EXTERNAL_DISPLAYNAME'])) $contact .= 'Name: '.$user_info['R25_EXTERNAL_DISPLAYNAME'].'\r\n';
+    if (!empty($user_info['R25_EXTERNAL_MAIL'])) $contact .= 'Mail: '.$user_info['R25_EXTERNAL_MAIL'] . '\r\n';
+    if (!empty($user_info['R25_EXTERNAL_TELEPHONENUMBER'])) $contact .= 'Phone: '.$user_info['R25_EXTERNAL_TELEPHONENUMBER'].'\r\n';
+    if (!empty($user_info['R25_EXTERNAL_POSTALADDRESS'])) $contact .= 'Address: '.$user_info['R25_EXTERNAL_POSTALADDRESS'] . '\r\n';
+    return $contact;
 }
 
 function user0_webauth_cron() {

@@ -5,10 +5,11 @@ AuthType WebAuth
 require valid-user
 WebAuthOptional off
 
+WebAuthLdapAttribute suAffiliation
+WebAuthLdapAttribute mail
 WebAuthLdapAttribute uid
 WebAuthLdapAttribute displayName
 WebAuthLdapAttribute ou
-WebAuthLdapAttribute mail
 WebAuthLdapAttribute telephonenumber
 WebAuthLdapAttribute facsimiletelephonenumber
 WebAuthLdapAttribute postaladdress
@@ -16,3 +17,4 @@ WebAuthLdapAttribute postaladdress
 WebAuthLdapPrivgroup stanford:student
 WebAuthLdapPrivgroup stanford:staff
 WebAuthLdapPrivgroup stanford:faculty
+WebAuthLdapPrivgroup earthsci:drupal-accounts
