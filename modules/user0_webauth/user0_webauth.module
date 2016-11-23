@@ -34,7 +34,7 @@ function user0_webauth_stanford_r25_external_user() {
       watchdog('stanford_r25','External login failed. Missing data file or uid.');
       @unlink($filename);
     } else {
-      $return_data = user_info();
+      $return_data = $user0_info;
     }
   }
   return $return_data;
@@ -42,11 +42,11 @@ function user0_webauth_stanford_r25_external_user() {
 
 function user0_webauth_stanford_r25_external_user_display($user_info) {
     $contact = '';
-    if (!empty($user_info['R25_EXTERNAL_OU'])) $contact .= 'Organization: '.$user_info['R25_EXTERNAL_OU'] . '\r\n';
-    if (!empty($user_info['R25_EXTERNAL_DISPLAYNAME'])) $contact .= 'Name: '.$user_info['R25_EXTERNAL_DISPLAYNAME'].'\r\n';
-    if (!empty($user_info['R25_EXTERNAL_MAIL'])) $contact .= 'Mail: '.$user_info['R25_EXTERNAL_MAIL'] . '\r\n';
-    if (!empty($user_info['R25_EXTERNAL_TELEPHONENUMBER'])) $contact .= 'Phone: '.$user_info['R25_EXTERNAL_TELEPHONENUMBER'].'\r\n';
-    if (!empty($user_info['R25_EXTERNAL_POSTALADDRESS'])) $contact .= 'Address: '.$user_info['R25_EXTERNAL_POSTALADDRESS'] . '\r\n';
+    if (!empty($user_info['R25_EXTERNAL_DISPLAYNAME'])) $contact .= $user_info['R25_EXTERNAL_DISPLAYNAME']."\r\n";
+    if (!empty($user_info['R25_EXTERNAL_OU'])) $contact .= $user_info['R25_EXTERNAL_OU'] . "\r\n";
+    if (!empty($user_info['R25_EXTERNAL_MAIL'])) $contact .= 'Mail: '.$user_info['R25_EXTERNAL_MAIL'] . "\r\n";
+    if (!empty($user_info['R25_EXTERNAL_TELEPHONENUMBER'])) $contact .= 'Phone: '.$user_info['R25_EXTERNAL_TELEPHONENUMBER']."\r\n";
+    if (!empty($user_info['R25_EXTERNAL_POSTALADDRESS'])) $contact .= 'Address: '.$user_info['R25_EXTERNAL_POSTALADDRESS'] . "\r\n";
     return $contact;
 }
 

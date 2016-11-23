@@ -5,13 +5,17 @@
         $tempnam = tempnam($tmp_dir,'');
         $ldap_vars = array();
         foreach ($_SERVER as $key => $value) {
-            if (substr_compare($key, 'WEBAUTH_LDAP_',0,13) === 0) {
-                $subkey = substr($key,13);
-                $ldap_vars['R25_EXTERNAL_'.$subkey] = $value;
+            if (substr_compare($key, 'WEBAUTH_LDAP',0,12) === 0) {
+                $subkey = substr($key,12);
+		if (substr_compare($subkey, '_', 0, 1) !== 0) {
+                    $subkey = '_' . $subkey;
+                }
+                $ldap_vars['R25_EXTERNAL'.$subkey] = $value;
             }
         }
-        $ldap_vars['R25)EXTERNAL_DESTINATION'] = $_REQUEST['destination'];
+        $ldap_vars['R25_EXTERNAL_DESTINATION'] = $_REQUEST['destination'];
         if (file_put_contents($tempnam,json_encode($ldap_vars)) !== false) {
+		@chmod($tempnam,0660);
             $fname = substr($tempnam,strrpos($tempnam,'/')+1);
             setcookie('user0_webauth',$fname,0,$_REQUEST['base_path'],$_REQUEST['cookie_domain'],TRUE,TRUE);
         }

@@ -130,7 +130,7 @@ function stanford_r25_room_info_form($form, &$form_state, $room_info = '')
 */
 
 // the reservation form callback is called by the reservation block
-function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5, $contact_info = array())
+function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5, $contact_info = '')
 {
     // keep the roomid for later processing
     $form['stanford_r25_booking_roomid'] = array(
@@ -192,6 +192,7 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
             '#required' => true,
         );
     } else {
+        $max_hours = '';
         $form['stanford_r25_booking_enddate'] = array(
             '#type' => 'date_popup',
             '#default_value' => format_date(time(), 'custom', 'Y-m-d H:i:s'),

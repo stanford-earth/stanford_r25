@@ -4,6 +4,17 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'stanford_r25_reservation') {
     if (!empty($form['stanford_r25_booking_roomid']['#value']) && substr($form['stanford_r25_booking_roomid']['#value'],0,3) == 'mh0' ) {
 
+      $se3_user = false;
+      $external_acct = module_invoke_all('stanford_r25_external_user');
+      if (!empty($external_acct) && is_array($external_acct)) {
+          foreach ($external_acct as $key => $value) {
+             if (substr_compare($key, 'R25_EXTERNAL_PRIVGROUP',0,22) == 0 && 
+                 $value == 'earthsci:drupal-accounts') {
+                 $se3_user = true;
+                 break; 
+             }
+          }
+      }
       $form['stanford_r25_booking_reason']['#title'] = 'Event name';
 
       $form['stanford_r25_booking_attr176']['#title'] = 'Is the event host using Hartley for the first time?';
@@ -25,6 +36,11 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
           )
       );
 
+      if ($se3_user) {
+          $form['stanford_r25_booking_attr171']['#type'] = 'hidden';
+          $form['stanford_r25_booking_attr172']['#type'] = 'hidden';
+          $form['stanford_r25_booking_attr173']['#type'] = 'hidden';
+      } else {
       $form['stanford_r25_booking_attr171']['#title'] = 'Is this event billable?';
       $form['stanford_r25_booking_attr171']['#description'] = 'Leave unchecked only if this event fits the non-billable ' .
           'criteria found on the <a href="https://earth.stanford.edu/resources/hartley/booking-instructions">Booking '.
@@ -53,10 +69,31 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
                   'checked' => TRUE),
           ),
       );
+      }
 
       $form['stanford_r25_booking_attr177']['#title'] = 'Description/Comments';
       $form['stanford_r25_booking_attr177']['#description'] = 'Any information, questions or remarks about this reservation.';
 
     }
   }
+}
+
+function se3_hartley_user_insert(&$edit, $account, $category)
+{      
+    if (module_exists('wmd4') && !empty($edit['is_new']) && !empty($edit['init'])) {
+            include_once(drupal_get_path('module','wmd4').'/wmd4.util.inc');
+            $ldap_vars = _wmd4_get_ldap_variables();
+            $displayname = '';
+            if ($ldap_vars !== FALSE) { 
+                foreach ($ldap_vars as $ldap_var) {
+                    if (substr($ldap_var,0,19) == 'wa_ldap_displayname') {
+                        $displayname = trim(substr($ldap_var,strpos($ldap_var,':')+1));
+                        break;
+                    }
+                }
+            }
+            if (!empty($displayname)) {
+	        db_update('users')->fields(array('name' => $displayname))->condition('uid',$account->uid)->execute();
+            }
+    }
 }

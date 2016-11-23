@@ -89,7 +89,9 @@ function _stanford_r25_feed()
             // also, certain rooms may want to show the description as the FullCalendar event title
             foreach ($results['index']['R25:EVENT_DESCRIPTION'] as $key => $value) {
                 $text = '';
-                $text = $results['vals'][$results['index']['R25:EVENT_DESCRIPTION'][$key]]['value'];
+                if (!empty($results['vals'][$results['index']['R25:EVENT_DESCRIPTION'][$key]]['value'])) {
+                    $text = $results['vals'][$results['index']['R25:EVENT_DESCRIPTION'][$key]]['value'];
+                }
                 if (!empty($text)) {
                     $index = count($items);
                     while ($index) {
