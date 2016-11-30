@@ -49,7 +49,7 @@ function dev_module_stanford_r25_external_user() {
 }
 
 function dev_module_stanford_r25_external_user_display($user_info) {
-    return "Organization: ".$user_info['R25_EXTERNAL_OID']."\r\nName: ".$user_info['R25_EXTERNAL_DISPLAYNAME'] .
+    return "Organization: ".$user_info['R25_EXTERNAL_OU']."\r\nName: ".$user_info['R25_EXTERNAL_DISPLAYNAME'] .
         "\r\nPhone: ".$user_info['R25_EXTERNAL_TELEPHONE']."\r\nMail: ".$user_info['R25_EXTERNAL_MAIL'];
 }
 

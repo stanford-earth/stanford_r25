@@ -1,0 +1,5 @@
+<r25:custom_attribute status="new">
+    <r25:attribute_id>[attr_id]</r25:attribute_id>
+    <r25:attribute_type>[attr_type]</r25:attribute_type>
+    <r25:attribute_value>[attr_value]</r25:attribute_value>
+</r25:custom_attribute>

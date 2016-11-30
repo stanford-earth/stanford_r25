@@ -10,6 +10,7 @@ define('STANFORD_R25_ROOM_STATUS_TENTATIVE', 2);
 define('STANFORD_R25_ROOM_STATUS_CONFIRMED', 3);
 define('STANFORD_R25_AUTH_DRUPAL_ACCT', 1);
 define('STANFORD_R25_AUTH_EXTERN_ACCT', 2);
+define('STANFORD_R25_AUTH_EITHER_ACCT', 3);
 
 /**
  * Implements hook_menu().
@@ -155,6 +156,49 @@ function stanford_r25_block_info()
     return $blocks;
 }
 
+function _stanford_r25_can_book($room_id) {
+
+  $can_book = array(
+    'can_book' => FALSE,
+    'auth' => 'internal',
+    'external_module' => '',
+    'external_acct' => FALSE
+  );
+  if (!empty($room_id)) {
+    $rooms = _stanford_r25_room_config_load();
+    if (!empty($rooms[$room_id]['authentication'])) {
+      if (($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_DRUPAL_ACCT ||
+          $rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EITHER_ACCT) &&
+        user_access('book r25 rooms')
+      ) {
+        $can_book['can_book'] = TRUE;
+      }
+      else {
+        if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT ||
+          $rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EITHER_ACCT
+        ) {
+          $can_book['auth'] = 'external';
+          $externs = module_implements('stanford_r25_external_user');
+          if (!empty($externs) && is_array($externs)) {
+            // if so, just use the first one returned
+            $can_book['external_module'] = $externs[0];
+            // call the stanford_r25_external_user hook for the module found
+            // it will return an array of user info if okay, or false if not
+            $external_acct = module_invoke($externs[0], 'stanford_r25_external_user');
+            if (!empty($external_acct)) {
+              // we got back a non-empty array, so assume an authenticated user who can book the room
+              $can_book['can_book'] = TRUE;
+              $can_book['external_acct'] = $external_acct;
+            }
+          }
+        }
+      }
+    }
+  }
+  return $can_book;
+
+}
+
 /**
  * implements hook_block_view
  */
@@ -194,47 +238,33 @@ function stanford_r25_block_view($delta = "")
                     'department administration for more information.';
             } else {
                 // see if the current user has access to book room
-                $can_book = false;
-
-                // if the room requires external authentication, see if we have a valid user
-                $external_module = '';
-                $external_acct = false;
-                if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT) {
-                    // see if any modules implement the stanford_r25_external_user hook
-                    $externs = module_implements('stanford_r25_external_user');
-                    if (is_array($externs) && !empty($externs)) {
-                        // if so, just use the first one returned
-                        $external_module = $externs[0];
-                        // call the stanford_r25_external_user hook for the module found
-                        // it will return an array of user info if okay, or false if not
-                        $external_acct = module_invoke($external_module,'stanford_r25_external_user');
-                        if (!empty($external_acct)) {
-                            // we got back a non-empty array, so assume an authenticated user who can book the room
-                            $can_book = true;
-                        }
-                    }
-                } else if (user_access('book r25 rooms')) {
-                    $can_book = true;
-                }
+                $can_book = _stanford_r25_can_book($room_id);
                 // if the room is reservable and the user has permission to book, create the reserve form
                 // with its max capacity. If we don't know its max capacity, set it to 5
-                if ($can_book) {
+                if ($can_book['can_book']) {
                     $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
-                    $external_display = module_invoke($external_module,'stanford_r25_external_user_display',$external_acct);
-                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display);
+                    $external_display = '';
+                    if ($can_book['auth'] == 'external' && !empty($can_book['external_acct'])) {
+                      $external_display = module_invoke($can_book['external_module'],
+                        'stanford_r25_external_user_display', $can_book['external_acct']);
+                    } else if ($can_book['auth'] == 'internal') {
+                      global $user;
+                      $external_display = $user->name . "\r\n" . $user->mail . "\r\n";
+                    }
+                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display, $can_book['external_acct']);
                     $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                     $block['content'] = drupal_render($form);
                 // otherwise, if this room authenticates externally, get the auth link from the external auth module
-                } else if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT) {
+                } else if ($rooms[$room_id]['authentication'] > STANFORD_R25_AUTH_DRUPAL_ACCT) {
                     // present the user with an authentication link to access the room reservation form
                     // but if no module implementing the hook was found we need to put up a message
-                    if (empty($external_module)) {
+                    if (empty($can_book['external_module'])) {
                         $block['subject'] = '';
                         $block['content'] = 'This room requires external authentication, but no login link was found.';
                     } else {
                         $block['subject'] = '';
                         $login_msg = variable_get('stanford_r25_ext_login_msg', 'Authenticate');
-                        $block['content'] = module_invoke($external_module, 'stanford_r25_external_link', $login_msg);
+                        $block['content'] = module_invoke($can_book['external_module'], 'stanford_r25_external_link', $login_msg);
                     }
                 // otherwise, access to reserve room is based on Drupal permissions so offer a login link if
                 // user is anonymous, or a 'no access' message if user is logged in
@@ -481,6 +511,9 @@ function _stanford_r25_parse_blackout_dates($inStr) {
 }
 
 function _stanford_r25_date_blacked_out($date) {
+
+    // if an empty date is given, return false
+    if (empty($date)) return false;
     
     // if I'm currently in a blackout period, the requested date doesn't matter - we consider it blacked out.
     // if I'm *not* currently in a blackout period, then the requested date has to be before the next blackout starts.

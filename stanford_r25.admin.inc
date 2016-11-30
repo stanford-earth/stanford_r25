@@ -411,6 +411,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
+            'email_requestor' => 0,
             'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
@@ -538,7 +539,10 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#type' => 'radios',
         '#title' => t('Authentication Method'),
         '#default_value' => $config['authentication'],
-        '#options' => array(1 => 'Internal (Drupal) Accounts', 2 => 'Non-Drupal Login'),
+        '#options' => array(
+          1 => 'Internal (Drupal) Accounts',
+          2 => 'External (Non-Drupal) Login',
+          3 => 'Either 1 or 2'),
         '#description' => t('Whether the room is bookable based on Drupal accounts, roles, and permissions or through external means.'),
     );
     $form['advanced']['multi_day'] = array(
@@ -568,7 +572,14 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $default_booking_instr['value'],
         '#format' => $default_booking_instr['format'],
     );
-    $form['created'] = array(
+    $form['advanced']['email_requestor'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Email reservation to requesting user'),
+      '#description' => t('Whether the user making the reservation should receive an email with the details.'),
+      '#default_value' => $config['email_requestor'],
+    );
+
+  $form['created'] = array(
         '#title' => t('Created on'),
         '#type' => 'textfield',
         '#default_value' => $config['created'],
@@ -640,6 +651,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
         'authentication' => (int)$form_state['values']['authentication'],
         'multi_day' => (int)$form_state['values']['multi_day'],
+        'email_requestor' => (int)$form_state['values']['email_requestor'],
         'override_booking_instructions' => array(
             'value' => $form_state['values']['override_booking_instructions']['value'],
             'format' => $form_state['values']['override_booking_instructions']['format']),
