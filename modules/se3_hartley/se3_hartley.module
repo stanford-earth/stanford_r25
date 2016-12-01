@@ -6,6 +6,8 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
 
       if (empty($form['#validate'])) $form['#validate']= array();
       $form['#validate'][] = '_se3_hartley_form_validate';
+      if (empty($form['#submit'])) $form['#submit'] = array();
+      $form['#submit'][] = '_se3_hartley_form_submit';
       $se3_user = false;
       $external_acct = module_invoke_all('stanford_r25_external_user');
       if (!empty($external_acct) && is_array($external_acct)) {
@@ -135,6 +137,10 @@ function _se3_hartley_form_validate($form, &$form_state) {
 
 }
 
+function _se3_hartley_form_submit($form, &$form_state) {
+    $xyz = 1;
+}
+
 function se3_hartley_user_insert(&$edit, $account, $category)
 {      
     if (module_exists('wmd4') && !empty($edit['is_new']) && !empty($edit['init'])) {
@@ -152,5 +158,21 @@ function se3_hartley_user_insert(&$edit, $account, $category)
             if (!empty($displayname)) {
 	        db_update('users')->fields(array('name' => $displayname))->condition('uid',$account->uid)->execute();
             }
+    }
+}
+
+function se3_hartley_stanford_r25_fullcalendar_limit_alter(&$calendar_limit) {
+    if (!empty($calendar_limit['room']) && substr($calendar_limit['room'],0,3) == 'mh0') {
+        if (user_access('administer stanford r25')) {
+            $calendar_limit['year'] = date('Y')+3;
+        } else {
+            $month = date('n');
+            $year = date('Y');
+            if ($month < 10) {
+                $calendar_limit = array('month' => 12, 'year' => $year);
+            } else {
+                $calendar_limit = array('month' => 12, 'year' => $year + 1);
+            }
+        }
     }
 }

@@ -67,6 +67,8 @@ var qtip = false;  // assume we don't have the qtip library to start
                 selectConstraint = {};
             }
         }
+        var calendarLimit = new Date(parseInt(Drupal.settings.stanfordR25CalendarLimitYear),
+            parseInt(Drupal.settings.stanfordR25CalendarLimitMonth));
 
         // get the maximum selectable duration of the room
         var maxDuration = 0;
@@ -126,6 +128,13 @@ var qtip = false;  // assume we don't have the qtip library to start
                         $('#calendar').fullCalendar('getDate').format('YYYY-MM-DD');
                     $('#permalink').html('<a href="' + permalink + '">Permalink to this page</a>');
                     //console.log('permalink: ' + permalink);
+                }
+                if ( calendarLimit < view.end) {
+                    $("#calendar .fc-next-button").hide();
+                    return false;
+                }
+                else {
+                    $("#calendar .fc-next-button").show();
                 }
             },
             // define how FullCalendar gets events by calling the r25_feed callback function

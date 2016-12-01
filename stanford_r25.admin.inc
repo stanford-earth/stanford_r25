@@ -193,7 +193,7 @@ function _stanford_r25_settings($form, &$form_state)
     $form['login']['login_contact_info'] = array(
         '#type' => 'markup',
         '#markup' => 'Contact information for room reservations will consist of the user account name and email ' .
-            'address unless it is overridden by an implementation of hook_stanford_r25_drupal_contact(&$contact_string). '.
+            'address unless it is overridden by an implementation of hook_stanford_r25_contact_alter(&$contact_string). '.
             'If multiple modules implement the hook, the value will be set by the last module invoked.',
     );
     $form['external'] = array(
@@ -216,8 +216,8 @@ function _stanford_r25_settings($form, &$form_state)
     $form['external']['external_contact_info'] = array(
         '#type' => 'markup',
         '#markup' => 'Contact information for room reservations will blank unless ' .
-            'it is set by an implementation of hook_stanford_r25_external_contact(&$contact_string). '.
-            'If multiple modules implement the hook, the value will be set by the last module invoked.',
+            'it is set by an implementation of hook_stanford_r25_external_user_display(&$acct_array). '.
+            'If multiple modules implement the hook, the value will be set by the first module found.',
     );
     $default_not_permitted = variable_get('stanford_r25_notpermitted_msg',
         array('value' => '', 'format' => filter_default_format()));

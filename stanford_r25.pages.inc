@@ -31,6 +31,10 @@ function _stanford_r25_calendar_page($room = NULL)
             }
             $multi_day = (!empty($rooms[$room]['multi_day'])) ? 1 : 0;
             drupal_add_js(array('stanfordR25MultiDay' => $multi_day), 'setting');
+            $calendar_limit = array('room' => $room, 'month' => date('n'), 'year' => date('Y')+1);
+            drupal_alter('stanford_r25_fullcalendar_limit',$calendar_limit);
+            drupal_add_js(array('stanfordR25CalendarLimitMonth' => $calendar_limit['month']), 'setting');
+            drupal_add_js(array('stanfordR25CalendarLimitYear' => $calendar_limit['year']), 'setting');
             if (intval($rooms[$room]['caltype']) == 1) {
                 // if the calendar is from 25Live Publisher, output the appropriate divs and javascript files
                 $output['control_div'] = array(
@@ -580,7 +584,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
             'subject' => $subject
         );
         drupal_mail('stanford_r25', $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'], $mail_list, language_default(), $params);
-
+        $form_state['storage']['stanford_r25_booking_success'] = true;
     } else {
         // display a message if the booking failed
         drupal_set_message('The system was unable to book your room. This may be because of a time conflict with another meeting, or because someone else booked it first or because of problems communicating with 25Live. Please try again.', 'error');
