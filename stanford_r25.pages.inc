@@ -583,8 +583,13 @@ function stanford_r25_reservation_submit($form, &$form_state)
             'body' => $body,
             'subject' => $subject
         );
-        drupal_mail('stanford_r25', $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'], $mail_list, language_default(), $params);
-        $form_state['storage']['stanford_r25_booking_success'] = true;
+        $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
+        drupal_mail('stanford_r25', $eventid, $mail_list, language_default(), $params);
+        if (!empty($room['postprocess_booking']) && !empty($res_usermail)) {
+            $form_state['storage']['stanford_r25_postprocess'] = array('room' => $form_state['storage']['stanford_r25_booking']['room'],
+                'dates' => $form_state['storage']['stanford_r25_booking']['dates'], 'mailto' => $res_usermail,
+                'event_name' => $form_state['values']['stanford_r25_booking_reason'], 'eventid' => $eventid);
+        }
     } else {
         // display a message if the booking failed
         drupal_set_message('The system was unable to book your room. This may be because of a time conflict with another meeting, or because someone else booked it first or because of problems communicating with 25Live. Please try again.', 'error');

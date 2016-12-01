@@ -411,7 +411,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
-            'email_requestor' => 0,
+            'postprocess_booking' => 0,
             'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
@@ -572,11 +572,11 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $default_booking_instr['value'],
         '#format' => $default_booking_instr['format'],
     );
-    $form['advanced']['email_requestor'] = array(
+    $form['advanced']['postprocess_booking'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Email reservation to requesting user'),
-      '#description' => t('Whether the user making the reservation should receive an email with the details.'),
-      '#default_value' => $config['email_requestor'],
+      '#title' => t('Postprocess Booking'),
+      '#description' => t("If you want to write you own submit hook to do something after a booking is complete, check this box and booking info will be placed in \$form_state['storage']"),
+      '#default_value' => $config['postprocess_booking'],
     );
 
   $form['created'] = array(
@@ -651,7 +651,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
         'authentication' => (int)$form_state['values']['authentication'],
         'multi_day' => (int)$form_state['values']['multi_day'],
-        'email_requestor' => (int)$form_state['values']['email_requestor'],
+        'postprocess_booking' => (int)$form_state['values']['postprocess_booking'],
         'override_booking_instructions' => array(
             'value' => $form_state['values']['override_booking_instructions']['value'],
             'format' => $form_state['values']['override_booking_instructions']['format']),
