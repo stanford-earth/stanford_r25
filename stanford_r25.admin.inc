@@ -542,7 +542,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#options' => array(
           1 => 'Internal (Drupal) Accounts',
           2 => 'External (Non-Drupal) Login',
-          3 => 'Either 1 or 2'),
+          3 => 'Both Internal and External'),
         '#description' => t('Whether the room is bookable based on Drupal accounts, roles, and permissions or through external means.'),
     );
     $form['advanced']['multi_day'] = array(

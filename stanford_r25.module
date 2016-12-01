@@ -101,6 +101,11 @@ function stanford_r25_menu()
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.feed.inc',
     );
+    $items['display_r25_room_config'] = array(
+        'page callback' => '_stanford_r25_list_rooms',
+        'access arguments' => array('administer stanford r25'),
+        'type' => MENU_CALLBACK,
+    );
     return $items;
 }
 
@@ -541,4 +546,11 @@ function _stanford_r25_date_blacked_out($date) {
         $blacked_out = false;
     }
     return $blacked_out;
+}
+
+function _stanford_r25_list_rooms() {
+    $rooms = _stanford_r25_room_config_load();
+    $room_output = print_r($rooms,TRUE);
+    $output = 'rooms: <pre>'.$room_output.'</pre>';
+    return $output;
 }

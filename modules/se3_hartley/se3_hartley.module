@@ -17,6 +17,12 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
              }
           }
       }
+
+      $month = date('n');
+      if (!user_access('administer stanford r25') && $month < 10)  {
+          $form['stanford_r25_booking_date']['#date_year_range'] = "-0:+0";
+          $form['stanford_r25_booking_enddate']['#date_year_range'] = "-0:+0";
+      }
       $form['stanford_r25_booking_reason']['#title'] = 'Event name';
 
       $form['stanford_r25_booking_attr176']['#title'] = 'Is the event host using Hartley for the first time?';
@@ -24,8 +30,8 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
 
       $form['stanford_r25_booking_attr169']['#title'] = 'Will food and/or beverages be served at this event?';
       $form['stanford_r25_booking_attr169']['#description'] = 'If so, you must acknowledge that a work order for cleanup ' .
-          'is required and must be received by the School of Earth, Energy & Environmental Sciences no less than one ' .
-          'week before the event.';
+          'is required and must be received by the School of Earth, Energy & Environmental Sciences no less than 48 ' .
+          'hours before the event.';
       $form['stanford_r25_booking_attr170']['#title'] = 'I agree to provide a work order for after-event cleanup.';
       $form['stanford_r25_booking_attr170']['#states'] = array(
           'required' => array(
@@ -43,10 +49,13 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
           $form['stanford_r25_booking_attr172']['#type'] = 'hidden';
           $form['stanford_r25_booking_attr173']['#type'] = 'hidden';
       } else {
-      $form['stanford_r25_booking_attr171']['#title'] = 'Is this event billable?';
-      $form['stanford_r25_booking_attr171']['#description'] = 'Leave unchecked only if this event fits the non-billable ' .
-          'criteria found on the <a href="https://earth.stanford.edu/resources/hartley/booking-instructions">Booking '.
-          'Instructions</a> page.';
+      $form['stanford_r25_booking_attr171']['#title'] = 'Event is billable.';
+      $form['stanford_r25_booking_attr171']['#description'] = 'Please provide a PTA number and Signature Authority.';
+      $form['stanford_r25_booking_attr171']['#default_value'] = 1;
+      $form['stanford_r25_booking_attr171']['#disabled'] = true;
+      //$form['stanford_r25_booking_attr171']['#description'] = 'Leave unchecked only if this event fits the non-billable ' .
+      //    'criteria found on the <a href="https://earth.stanford.edu/resources/hartley/booking-instructions">Booking '.
+      //    'Instructions</a> page.';
       $form['stanford_r25_booking_attr172']['#title'] = 'University PTA number';
       $form['stanford_r25_booking_attr172']['#description'] = 'PTA is required for billable reservations.';
       $form['stanford_r25_booking_attr172']['#states'] = array(
@@ -76,13 +85,53 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
       $form['stanford_r25_booking_attr177']['#title'] = 'Description/Comments';
       $form['stanford_r25_booking_attr177']['#description'] = 'Any information, questions or remarks about this reservation.';
 
+      $form['stanford_r25_contact_175']['#title'] = 'Booking Concact Info';
+      $form['stanford_r25_contact_175']['#required'] = true;
+
     }
   }
 }
 
 function _se3_hartley_form_validate($form, &$form_state) {
 
-    $xyz = 1;
+    if (!user_access('administer stanford r25'))  {
+        $month = date('n');
+        $year = date('Y');
+        $start_year = intval(substr($form_state['values']['stanford_r25_booking_date'],0,4));
+        $end_year = intval(substr($form_state['values']['stanford_r25_booking_enddate'],0,4));
+        if ($month < 10 && ($start_year != $year || $end_year != $year)) {
+            form_set_error('stanford_r25_booking_date','You may only reserve this space for dates during the current year.');
+            return;
+        } else if ($start_year > $year + 1 || $end_year > $year + 1) {
+            form_set_error('stanford_r25_booking_date', 'You may only reserve this space for dates during the remainder of this year and next year.');
+            return;
+        }
+    }
+
+    if (empty($form_state['values']['stanford_r25_contact_175'])) {
+        form_set_error('stanford_r25_contact_175', 'Please enter your contact information in the provided field.');
+        return;
+    }
+    if (!empty($form_state['values']['stanford_r25_booking_attr169']) &&
+        intval($form_state['values']['stanford_r25_booking_attr169'] == 1)) {
+        if (empty($form_state['values']['stanford_r25_booking_attr170']) ||
+            intval($form_state['values']['stanford_r25_booking_attr170']) == 0) {
+            form_set_error('stanford_r25_booking_attr170','If you are serving food or beverages, you must agree to provide a work order for cleanup.');
+            return;
+        }
+    }
+
+    if (!empty($form_state['values']['stanford_r25_booking_attr171']) &&
+        intval($form_state['values']['stanford_r25_booking_attr171'] == 1)) {
+        if (empty($form_state['values']['stanford_r25_booking_attr172'])) {
+            form_set_error('stanford_r25_booking_attr172','Please provide a PTA number for billing for this reservation.');
+            return;
+        }
+        if (empty($form_state['values']['stanford_r25_booking_attr173'])) {
+            form_set_error('stanford_r25_booking_attr173','Please provide a signature authority name for billing for this reservation.');
+            return;
+        }
+    }
 
 }
 
