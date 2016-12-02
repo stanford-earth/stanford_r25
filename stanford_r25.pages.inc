@@ -541,6 +541,8 @@ function stanford_r25_reservation_submit($form, &$form_state)
         }
         drupal_set_message($msg);
 
+        $estimated_charge = 0;
+        $billable = false;
         $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
         if (!empty($form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'])) {
             $bill_code = $form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'];
@@ -548,6 +550,7 @@ function stanford_r25_reservation_submit($form, &$form_state)
             drupal_alter('stanford_r25_isbillable',$billable);
             if ($billable) {
                 $billing_xml = _stanford_r25_api_call('billing-get', null, null, $eventid);
+                //$billing_xml = str_replace("\n"," ",$billing_xml);
                 $est_ptr = strpos($billing_xml, 'status="est"');
                 $billing_xml = substr($billing_xml, 0, $est_ptr) . 'status="mod"' . substr($billing_xml, $est_ptr + 12);
                 $space_code = strpos($billing_xml,$form_state['storage']['stanford_r25_booking']['room']['space_id']);
@@ -558,7 +561,23 @@ function stanford_r25_reservation_submit($form, &$form_state)
                 $billing_xml = substr($billing_xml, 0, $est_ptr) . '<r25:rate_group_id>'.$bill_code.'</r25:rate_group_id>'.
                     substr($billing_xml, $est_ptr + 20);
                 $result = _stanford_r25_api_call('billing-put', null, null, $billing_xml, $eventid);
-                $xyz = 1;
+                if ($result) {
+                    if (!empty($result['index']['R25:BILL_ITEM_TYPE_NAME']) &&
+                        is_array($result['index']['R25:BILL_ITEM_TYPE_NAME'])) {
+                        foreach($result['index']['R25:BILL_ITEM_TYPE_NAME'] as $key => $value) {
+                            if (!empty($result['vals'][$value]['value']) &&
+                                $result['vals'][$value]['value'] === 'GRAND TOTAL') {
+                                    if (!empty($result['index']['R25:TOTAL_CHARGE'][$key])) {
+                                        $key2 = $result['index']['R25:TOTAL_CHARGE'][$key];
+                                        if (!empty($result['vals'][$key2]['value'])) {
+                                            $estimated_charge = intval($result['vals'][$key2]['value']);
+                                        }
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -586,8 +605,8 @@ function stanford_r25_reservation_submit($form, &$form_state)
             }
         }
         $body[] = "Room: " . $form_state['storage']['stanford_r25_booking']['room']['display_name'];
-        $body[] = "Date: " . $date->format("l, F j, Y g:i a");
         if (!empty($form_state['values']['stanford_r25_booking_duration'])) {
+            $body[] = "Date: " . $date->format("l, F j, Y g:i a");
             $duration = (intval($form_state['values']['stanford_r25_booking_duration']) * 30) + 30;
             if ($duration > 120) {
                 $body[] = 'Duration: ' . $duration / 60 . ' hours';
@@ -595,11 +614,15 @@ function stanford_r25_reservation_submit($form, &$form_state)
                 $body[] = 'Duration: ' . $duration . ' minutes';
             }
         } else {
+            $body[] = "Start Date: " . $date->format("l, F j, Y g:i a");
             $enddate = DateTime::createFromFormat(DATE_W3C, $form_state['storage']['stanford_r25_booking']['dates']['end']);
             $body[] = "End Date: " . $enddate->format("l, F j, Y g:i a");
         }
         $body[] = "Reason: " . $form_state['values']['stanford_r25_booking_reason'];
-        $body[] = "Requested by: " . $user->name . " " . $user->mail;
+        $body[] = "Requested by: " . $res_username . " " . $res_usermail;
+        if ($estimated_charge > 0) {
+            $body[] = "Estimated Fee: $" . $estimated_charge;
+        }
         $params = array(
             'body' => $body,
             'subject' => $subject
@@ -608,24 +631,28 @@ function stanford_r25_reservation_submit($form, &$form_state)
         if (!empty($room['postprocess_booking']) && !empty($res_usermail)) {
             $form_state['storage']['stanford_r25_postprocess'] = array('room' => $form_state['storage']['stanford_r25_booking']['room'],
                 'dates' => $form_state['storage']['stanford_r25_booking']['dates'], 'mailto' => $res_usermail,
-                'event_name' => $form_state['values']['stanford_r25_booking_reason'], 'eventid' => $eventid);
+                'event_name' => $form_state['values']['stanford_r25_booking_reason'], 'eventid' => $eventid,
+                'est_charge' => $estimated_charge);
         }
     } else {
         // display a message if the booking failed
         drupal_set_message('The system was unable to book your room. This may be because of a time conflict with another meeting, or because someone else booked it first or because of problems communicating with 25Live. Please try again.', 'error');
         $body = array();
-        $event_id = 'unknown';
+        $event_id = 0;
         if (!empty($result['index']['R25:EVENT_ID'][0]) && !empty($result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'])) {
             $event_id = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
-            $body[] = 'failed reservation at: https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
+            $body[] = 'failed reservation at: https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $event_id;
+            _stanford_r25_api_call('delete', null, null, $event_id);
         }
+
+        //remove from share
         $xyz = print_r($result, TRUE);
         $body[] = 'failed reservation. no event id. results:<pre>' . $xyz . '</pre>';
         drupal_mail('stanford_r25', $event_id, 'ksharp@stanford.edu', language_default(), array(
             'body' => $body,
             'subject' => 'r25 reservation failure'
         ));
-        _stanford_r25_api_call('delete', null, null, $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value']);
+
     }
     // remove the storage we set up in validate
     unset($form_state['storage']['stanford_r25_booking']);

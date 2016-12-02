@@ -448,7 +448,8 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing';
             break;
         case 'billing-put':
-            $xml_command = 'event.xml?event-id=' . $id;
+            $xml_command = 'event.xml?event_id=' . $id . '&include=billing';
+            break;
         default:
             $xml_command = 'null.xml';
     }

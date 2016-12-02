@@ -1,5 +1,26 @@
 <?php
 
+function _se3_hartley_is_se3_user() {
+    global $user;
+    $se3_user = false;
+    if ($user->uid > 1) {
+        $se3_user = true;
+    }  else {
+        $external_acct = module_invoke_all('stanford_r25_external_user');
+        if (!empty($external_acct) && is_array($external_acct)) {
+            foreach ($external_acct as $key => $value) {
+                if (substr_compare($key, 'R25_EXTERNAL_PRIVGROUP', 0, 22) == 0 &&
+                    $value == 'earthsci:drupal-accounts')
+                {
+                    $se3_user = true;
+                    break;
+                }
+            }
+        }
+    }
+    return $se3_user;
+}
+
 function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'stanford_r25_reservation') {
     if (!empty($form['stanford_r25_booking_roomid']['#value']) && substr($form['stanford_r25_booking_roomid']['#value'],0,3) == 'mh0' ) {
@@ -8,17 +29,7 @@ function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
       $form['#validate'][] = '_se3_hartley_form_validate';
       if (empty($form['#submit'])) $form['#submit'] = array();
       $form['#submit'][] = '_se3_hartley_form_submit';
-      $se3_user = false;
-      $external_acct = module_invoke_all('stanford_r25_external_user');
-      if (!empty($external_acct) && is_array($external_acct)) {
-          foreach ($external_acct as $key => $value) {
-             if (substr_compare($key, 'R25_EXTERNAL_PRIVGROUP',0,22) == 0 && 
-                 $value == 'earthsci:drupal-accounts') {
-                 $se3_user = true;
-                 break; 
-             }
-          }
-      }
+      $se3_user = _se3_hartley_is_se3_user();
 
       $month = date('n');
       if (!user_access('administer stanford r25') && $month < 10)  {
@@ -139,11 +150,16 @@ function _se3_hartley_form_validate($form, &$form_state) {
 
 function _se3_hartley_form_submit($form, &$form_state) {
     if (!empty($form_state['storage']['stanford_r25_postprocess']) &&
-        !empty($form_state['storage']['stanford_r25_postprocess']['mailto'])) {
-
+        !empty($form_state['storage']['stanford_r25_postprocess']['mailto']))
+    {
         $room = $form_state['storage']['stanford_r25_postprocess']['room'];
         $dates = $form_state['storage']['stanford_r25_postprocess']['dates'];
-        $mail_list .= $form_state['storage']['stanford_r25_postprocess']['mailto'];
+        $mail_list = $form_state['storage']['stanford_r25_postprocess']['mailto'];
+
+        // remove from share
+        global $user;
+        if ($user->uid == 1) $mail_list = 'kenneth.sharp@stanford.edu';
+
         $subject =  $room['display_name'] .': Your booking request is now pending approval';
         $body = array();
         $body[] = 'The Hartley booking manager will review your request as soon as possible, and you will receive email notification upon approval.';
@@ -156,10 +172,12 @@ function _se3_hartley_form_submit($form, &$form_state) {
             $space_str .= ' (Does *not* include Hartley Conference Room and Kitchen';
         }
         $body[] = 'Event space: ' . $space_str;
-        //$body[] = 'Starting: ' . $dates['start'];
-        //$body[] = 'Ending: ' . $dates['end'];
         $body[] = 'Starting: ' . DateTime::createFromFormat(DATE_W3C, $dates['start'])->format("l, F j, Y g:i a");
         $body[] = 'Ending: ' . DateTime::createFromFormat(DATE_W3C, $dates['end'])->format("l, F j, Y g:i a");
+        $est_fee = $form_state['storage']['stanford_r25_postprocess']['est_charge'];
+        if ($est_fee > 0) {
+            $body[] = 'Estimated Room Fee: $' . $est_fee;
+        }
         $body[] = 'If food IS served or consumed, you must get a work order from Custodial Services. This is not negotiable. ';
         $body[] = 'Allow at least 30 minutes for cleanup if you get a work order.';
         $body[] = 'To update or cancel your booking request, please send an email with the relevant information to mailto:swasmer@stanford.edu';
@@ -204,6 +222,15 @@ function se3_hartley_stanford_r25_fullcalendar_limit_alter(&$calendar_limit) {
             } else {
                 $calendar_limit = array('month' => 12, 'year' => $year + 1);
             }
+        }
+    }
+}
+
+function se3_hartley_stanford_r25_isbillable_alter(&$is_billable) {
+    if ($is_billable) {
+        $se3_user = _se3_hartley_is_se3_user();
+        if ($se3_user) {
+            $is_billable = false;
         }
     }
 }
