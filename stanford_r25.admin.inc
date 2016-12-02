@@ -411,7 +411,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
-            'postprocess_booking' => 0,
+            'postprocess_booking' => 0, 'auto_billing_code' => '',
             'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
@@ -564,6 +564,12 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#default_value' => $config['contact_attr'],
         '#description' => t("Event Custom Attribute in which we will store the user's contact information."),
     );
+    $form['advanced']['auto_billing_code'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Auto-Bill Rate Group ID'),
+        '#default_value' => $config['auto_billing_code'],
+        '#description' => t("The rate group id to use to auto-bill for the use of this room. Leave blank for none."),
+    );
     $default_booking_instr = $config['override_booking_instructions'];
     $form['advanced']['override_booking_instructions'] = array(
         '#type' => 'text_format',
@@ -659,6 +665,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'event_attribute_fields' => _stanford_r25_update_event_attribute_fields($form_state['values']['event_attributes']),
         'contact_attr' => (string)$form_state['values']['contact_attr'],
         'contact_attr_field' => _stanford_r25_update_event_attribute_fields($form_state['values']['contact_attr'],true),
+        'auto_billing_code' => (string)$form_state['values']['auto_billing_code'],
     );
     _stanford_r25_room_config_save($fields);
     $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';

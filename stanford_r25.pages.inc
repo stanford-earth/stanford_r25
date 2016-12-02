@@ -541,6 +541,27 @@ function stanford_r25_reservation_submit($form, &$form_state)
         }
         drupal_set_message($msg);
 
+        $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
+        if (!empty($form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'])) {
+            $bill_code = $form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'];
+            $billable = true;
+            drupal_alter('stanford_r25_isbillable',$billable);
+            if ($billable) {
+                $billing_xml = _stanford_r25_api_call('billing-get', null, null, $eventid);
+                $est_ptr = strpos($billing_xml, 'status="est"');
+                $billing_xml = substr($billing_xml, 0, $est_ptr) . 'status="mod"' . substr($billing_xml, $est_ptr + 12);
+                $space_code = strpos($billing_xml,$form_state['storage']['stanford_r25_booking']['room']['space_id']);
+                $bill_tmp = substr($billing_xml,0,$space_code);
+                $est_ptr = strrpos($bill_tmp, 'status="est"');
+                $billing_xml = substr($billing_xml, 0, $est_ptr) . 'status="mod"' . substr($billing_xml, $est_ptr + 12);
+                $est_ptr = strpos($billing_xml, '<r25:rate_group_id/>', $space_code);
+                $billing_xml = substr($billing_xml, 0, $est_ptr) . '<r25:rate_group_id>'.$bill_code.'</r25:rate_group_id>'.
+                    substr($billing_xml, $est_ptr + 20);
+                $result = _stanford_r25_api_call('billing-put', null, null, $billing_xml, $eventid);
+                $xyz = 1;
+            }
+        }
+
         // send an email about the booking if mail list is set
         if (!empty($mail_list) && !empty($form_state['storage']['stanford_r25_booking']['room']['email_list'])) {
             $mail_list .= ', ';
@@ -583,7 +604,6 @@ function stanford_r25_reservation_submit($form, &$form_state)
             'body' => $body,
             'subject' => $subject
         );
-        $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
         drupal_mail('stanford_r25', $eventid, $mail_list, language_default(), $params);
         if (!empty($room['postprocess_booking']) && !empty($res_usermail)) {
             $form_state['storage']['stanford_r25_postprocess'] = array('room' => $form_state['storage']['stanford_r25_booking']['room'],
