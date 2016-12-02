@@ -1,0 +1,7 @@
+<r25:bill_item status="new">
+    <r25:bill_item_id>1675</r25:bill_item_id>
+    <r25:bill_item_type_id>3</r25:bill_item_type_id>
+    <r25:rate_id>156</r25:rate_id>
+    <r25:rate_group_id>155</r25:rate_group_id>
+    <r25:charge_to_id>4356</r25:charge_to_id>
+</r25:bill_item>
