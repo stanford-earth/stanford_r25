@@ -542,7 +542,6 @@ function stanford_r25_reservation_submit($form, &$form_state)
         drupal_set_message($msg);
 
         $estimated_charge = 0;
-        $billable = false;
         $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
         if (!empty($form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'])) {
             $bill_code = $form_state['storage']['stanford_r25_booking']['room']['auto_billing_code'];
@@ -562,18 +561,35 @@ function stanford_r25_reservation_submit($form, &$form_state)
                     substr($billing_xml, $est_ptr + 20);
                 $result = _stanford_r25_api_call('billing-put', null, null, $billing_xml, $eventid);
                 if ($result) {
-                    if (!empty($result['index']['R25:BILL_ITEM_TYPE_NAME']) &&
-                        is_array($result['index']['R25:BILL_ITEM_TYPE_NAME'])) {
-                        foreach($result['index']['R25:BILL_ITEM_TYPE_NAME'] as $key => $value) {
+                    if (!empty($result['index']['R25:RATE_GROUP_ID']) &&
+                        is_array($result['index']['R25:RATE_GROUP_ID']))
+                    {
+                        foreach($result['index']['R25:RATE_GROUP_ID'] as $key => $value) {
                             if (!empty($result['vals'][$value]['value']) &&
-                                $result['vals'][$value]['value'] === 'GRAND TOTAL') {
-                                    if (!empty($result['index']['R25:TOTAL_CHARGE'][$key])) {
-                                        $key2 = $result['index']['R25:TOTAL_CHARGE'][$key];
-                                        if (!empty($result['vals'][$key2]['value'])) {
-                                            $estimated_charge = intval($result['vals'][$key2]['value']);
+                                $result['vals'][$value]['value'] == $bill_code) {
+                                $rate_id = 0;
+                                if (!empty($result['index']['R25:RATE_ID'][$key]) &&
+                                    !empty($result['vals'][$result['index']['R25:RATE_ID'][$key]]['value']))
+                                {
+                                    $rate_id = $result['vals'][$result['index']['R25:RATE_ID'][$key]]['value'];
+                                }
+                                if (!empty($rate_id)) {
+                                    $xml_file = '/stanford_r25_reserve.xml';
+                                    $xml = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_pricing.xml');
+                                    $xml = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $xml);
+                                    $xml = str_replace('[r25_end_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['end'], $xml);
+                                    $calcdate = DateTime::createFromFormat(DATE_W3C, $form_state['storage']['stanford_r25_booking']['dates']['start']);
+                                    $price_result = _stanford_r25_api_call('calc_price', null, null, $xml,
+                                        'rate_group_id='.$bill_code.'&rate_id='.$rate_id.'&bill_dt='.$calcdate->format("Ymd"));
+                                    if ($price_result) {
+                                        if (!empty($price_result['index']['R25:TOTAL'][0]) &&
+                                            !empty($price_result['vals'][$price_result['index']['R25:TOTAL'][0]]['value']))
+                                        {
+                                            $estimated_charge = intval($price_result['vals'][$price_result['index']['R25:TOTAL'][0]]['value']);
                                         }
                                     }
-                                    break;
+                                }
+                                break;
                             }
                         }
                     }

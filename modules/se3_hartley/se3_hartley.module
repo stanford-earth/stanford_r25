@@ -176,7 +176,7 @@ function _se3_hartley_form_submit($form, &$form_state) {
         $body[] = 'Ending: ' . DateTime::createFromFormat(DATE_W3C, $dates['end'])->format("l, F j, Y g:i a");
         $est_fee = $form_state['storage']['stanford_r25_postprocess']['est_charge'];
         if ($est_fee > 0) {
-            $body[] = 'Estimated Room Fee: $' . $est_fee;
+            $body[] = 'Estimated Room Fee: $' . $est_fee . ' --reflects fee scheduled for time of event. Fees subject to change.';
         }
         $body[] = 'If food IS served or consumed, you must get a work order from Custodial Services. This is not negotiable. ';
         $body[] = 'Allow at least 30 minutes for cleanup if you get a work order.';

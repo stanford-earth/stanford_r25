@@ -450,6 +450,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'billing-put':
             $xml_command = 'event.xml?event_id=' . $id . '&include=billing';
             break;
+        case 'calc_price':
+            $xml_command = 'calc_price.xml?'.$id;
+            break;
         default:
             $xml_command = 'null.xml';
     }
@@ -459,7 +462,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
     // depending on what we're doing, the HTTP method will be GET, POST, or DELETE
     $method = 'GET';
     $options = array();
-    if ($command == 'reserve') {
+    if ($command == 'reserve' || $command == 'calc_price') {
         // $post_data contains the XML for a reservation request
         $method = 'POST';
         $options['data'] = $post_data;
