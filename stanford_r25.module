@@ -445,13 +445,10 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             $xml_command = 'evatrb.xml?attribute_id=' . $post_data;
             break;
         case 'billing-get':
-            $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing';
+            $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing+history';
             break;
         case 'billing-put':
-            $xml_command = 'event.xml?event_id=' . $id . '&include=billing';
-            break;
-        case 'calc_price':
-            $xml_command = 'calc_price.xml?'.$id;
+            $xml_command = 'event.xml?event_id=' . $id . '&include=billing+history';
             break;
         default:
             $xml_command = 'null.xml';
