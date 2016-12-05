@@ -168,7 +168,7 @@ function _se3_hartley_form_submit($form, &$form_state) {
         $space_str = 'Event space: ' . $room['display_name'];
         if ($room['machine_name'] == 'mh01') {
             $space_str .= ' (Does *not* include Mitchell Patio)';
-        } else if ($room['machine_name' == 'mh02']) {
+        } else if ($room['machine_name'] == 'mh02') {
             $space_str .= ' (Does *not* include Hartley Conference Room and Kitchen';
         }
         $body[] = 'Event space: ' . $space_str;
