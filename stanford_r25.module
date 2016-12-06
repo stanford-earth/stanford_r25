@@ -101,6 +101,14 @@ function stanford_r25_menu()
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.feed.inc',
     );
+    $items['r25/%/cancel_reservation/%'] = array(
+        'title' => 'Cancel Reservation',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('_stanford_r25_cancel_reservation',1,3),
+        'access arguments' => array('book r25 rooms'),
+        'type' => MENU_CALLBACK,
+        'file' => 'stanford_r25.pages.inc',
+    );
     $items['display_r25_room_config'] = array(
         'page callback' => '_stanford_r25_list_rooms',
         'access arguments' => array('administer stanford r25'),
@@ -444,6 +452,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'evatrb':
             $xml_command = 'evatrb.xml?attribute_id=' . $post_data;
             break;
+        case 'event-get':
+            $xml_command = 'event.xml?event_id=' . $post_data;
+            break;
         case 'billing-get':
             $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing+history';
             break;
@@ -561,5 +572,96 @@ function _stanford_r25_list_rooms() {
     $rooms = _stanford_r25_room_config_load();
     $room_output = print_r($rooms,TRUE);
     $output = 'rooms: <pre>'.$room_output.'</pre>';
+    return $output;
+}
+
+function _stanford_r25_user_can_cancel($room_id, $event_id)
+{
+    $result = _stanford_r25_api_call('event-get', null, null, $event_id);
+    if ($result) {
+        $can_cancel = false;
+        global $user;
+        if ($user->uid == 1 || user_access('administer stanford r25')) {
+            $can_cancel = true;
+        } else if (!empty($user->mail)) {
+            // see if requestor email matches or is quickbook
+            $quickbook_id = intval(variable_get('stanford_r25_credential_contact_id','0'));
+            $scheduler_id = 0;
+            $scheduler_email = '';
+            if (!empty($result['index']['R25:ROLE_NAME']) && is_array($result['index']['R25:ROLE_NAME'])) {
+                foreach ($result['index']['R25:ROLE_NAME'] as $key => $value) {
+                    if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Scheduler') {
+                        if (!empty($result['index']['R25:CONTACT_ID'][$key]) && 
+                            !empty($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value']))
+                        {
+                            $scheduler_id = intval($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value']);
+                            if (!empty($result['index']['R25:EMAIL'][$key]) &&
+                                !empty($result['vals'][$result['index']['R25:EMAIL'][$key]]['value']))
+                            {
+                                $scheduler_email = $result['vals'][$result['index']['R25:EMAIL'][$key]]['value'];
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if ($scheduler_id > 0) {
+                // if the reservation was made with quickbook, we need to pull the requestor's email address out of the event description
+                if ($quickbook_id == $scheduler_id) {
+                    $scheduler_email = '';
+                    if (!empty($result['index']['R25:TEXT_TYPE_NAME']) && is_array($result['index']['R25:TEXT_TYPE_NAME'])) {
+                        foreach ($result['index']['R25:TEXT_TYPE_NAME'] as $key => $value) {
+                            if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Description') {
+                                if (!empty($result['index']['R25:TEXT'][$key]) &&
+                                    !empty($result['vals'][$result['index']['R25:TEXT'][$key]]['value']))
+                                {
+                                    $desc = $result['vals'][$result['index']['R25:TEXT'][$key]]['value'];
+                                    $mailto_pos = strpos($desc,'"mailto:');
+                                    if ($mailto_pos !== false) {
+                                        $mailto_endpos = strpos($desc,'\"',$mailto_pos+8);
+                                        if ($mailto_endpos !== false) {
+                                            $scheduler_email = substr($desc,$mailto_pos+8, $mailto_endpos - ($mailto_pos+8));
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!empty($scheduler_email) && $user->mail === $scheduler_email) {
+                    $can_cancel = true;
+                }
+            }
+        }
+
+        // if $can_cancel is false, we should check if the user is in a security group that can still be
+        // allowed to cancel
+        if (!$can_cancel) {
+            $rooms = _stanford_r25_room_config_load();
+            if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
+                $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $rooms[$room_id]['approver_secgroup_id']);
+                if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
+                    foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
+                        if (!empty($sec_result['vals'][$value]['value'])) {
+                            if ($user->mail === $sec_result['vals'][$value]['value']) {
+                                $can_cancel = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+                
+        if ($can_cancel) {
+            $output = $result;
+        } else {
+            $output = false;
+        }
+    } else {
+        drupal_set_message('Unable to retrieve data from 25Live. Please try again later.','error',false);
+        $output = false;
+    }
     return $output;
 }

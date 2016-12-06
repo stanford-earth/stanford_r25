@@ -35,6 +35,7 @@ function _stanford_r25_feed()
         // for each result, store the data in the return array
         foreach ($results['index']['R25:RESERVATION_ID'] as $key => $value) {
             $id = $results['vals'][$value]['value'];
+            $event_id = _stanford_r25_feed_get_value($results, 'R25:EVENT_ID', $key);
             $title = _stanford_r25_feed_get_value($results, 'R25:EVENT_NAME', $key);
             $start = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_START_DT', $key);
             $end = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_END_DT', $key);
@@ -43,6 +44,7 @@ function _stanford_r25_feed()
             $state_text = _stanford_r25_feed_get_value($results, 'R25:STATE_NAME', $key);
             $items[] = array(
                 'id' => $id,
+                'event_id' => $event_id,
                 'index' => $value,
                 'title' => $title,
                 'start' => $start,
@@ -121,6 +123,7 @@ function _stanford_r25_feed()
                     $items[$key]['tip'] .= '<br />' . $item['scheduled_by'];
                 }
                 drupal_alter('stanford_r25_contact',$items[$key]['tip']);
+                $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '">Click to cancel reservation</a>';
             }
         }
     }

@@ -665,3 +665,35 @@ function stanford_r25_reservation_submit($form, &$form_state)
     // remove the storage we set up in validate
     unset($form_state['storage']['stanford_r25_booking']);
 }
+
+function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_id) {
+    $my_args = func_get_args();
+    $result = _stanford_r25_user_can_cancel($room_id, $event_id);
+    if (!$result) {
+        return MENU_ACCESS_DENIED;
+    } else {
+        $rooms = _stanford_r25_room_config_load();
+        $msg = 'Are you sure you wish to cancel Reservation ';
+        if (!empty($result['index']['R25:EVENT_NAME']) && is_array($result['index']['R25:EVENT_NAME'])) {
+            $msg .= $result['vals'][$result['index']['R25:EVENT_NAME'][0]]['value'];
+        } else {
+            $msg .= $event_id;
+        }
+        if (!empty($rooms[$room_id]['display_name'])) {
+            $msg .= ' in room ' . $rooms[$room_id]['display_name'];
+        }
+        if (!empty($result['index']['R25:EVENT_START_DT']) && is_array($result['index']['R25:EVENT_START_DT'])) {
+            if (!empty($result['vals'][$result['index']['R25:EVENT_START_DT'][0]]['value'])) {
+                $startdate = DateTime::createFromFormat(DATE_W3C, $result['vals'][$result['index']['R25:EVENT_START_DT'][0]]['value']);
+                $msg .= ' ' . $startdate->format("l, F j, Y g:i a");
+            }
+        }
+        $msg .= '?';
+        $form = confirm_form($form,$msg,'r25/'.$room_id.'/calendar',null,'Cancel Reservation','Go Back to Calendar','cancel_res');
+        return $form;
+    }
+}
+
+function _stanford_r25_cancel_reservation_submit($form, &$form_state) {
+    $xyz = 1;
+}
