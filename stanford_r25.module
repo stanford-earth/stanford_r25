@@ -455,6 +455,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'event-get':
             $xml_command = 'event.xml?event_id=' . $post_data;
             break;
+        case 'event-put':
+            $xml_command = 'event.xml?event_id=' . $id;
+            break;
         case 'billing-get':
             $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing+history';
             break;
@@ -474,7 +477,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         // $post_data contains the XML for a reservation request
         $method = 'POST';
         $options['data'] = $post_data;
-    } else if ($command == 'billing-put') {
+    } else if ($command == 'billing-put' || $command == 'event-put') {
         $method = 'PUT';
         $options['data'] = $post_data;
     } else if ($command == 'delete') {
@@ -505,6 +508,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             $result = true;
         } else {
             $result = array('vals' => $vals, 'index' => $index);
+        }
+        if ($command = 'event-get') {
+            $result['raw-xml'] = $output->data;
         }
     }
     return $result;
@@ -618,7 +624,7 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
                                     $desc = $result['vals'][$result['index']['R25:TEXT'][$key]]['value'];
                                     $mailto_pos = strpos($desc,'"mailto:');
                                     if ($mailto_pos !== false) {
-                                        $mailto_endpos = strpos($desc,'\"',$mailto_pos+8);
+                                        $mailto_endpos = strpos($desc,'"',$mailto_pos+8);
                                         if ($mailto_endpos !== false) {
                                             $scheduler_email = substr($desc,$mailto_pos+8, $mailto_endpos - ($mailto_pos+8));
                                         }
@@ -664,4 +670,19 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
         $output = false;
     }
     return $output;
+}
+
+function _stanford_r25_security_group_emails($secgroup_id = null) {
+    $secgroup_emails = '';
+    if (!empty($secgroup_id)) {
+        $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
+        if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
+            foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
+                if (!empty($sec_result['vals'][$value]['value'])) {
+                    $secgroup_emails .= $sec_result['vals'][$value]['value'] . ', ';
+                 }
+            }
+        }
+    }
+    return $secgroup_emails;
 }

@@ -122,8 +122,34 @@ function _stanford_r25_feed()
                 if (!empty($item['scheduled_by'])) {
                     $items[$key]['tip'] .= '<br />' . $item['scheduled_by'];
                 }
-                drupal_alter('stanford_r25_contact',$items[$key]['tip']);
-                $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '">Click to cancel reservation</a>';
+                drupal_alter('stanford_r25_contact', $items[$key]['tip']);
+                $can_cancel = false;
+                global $user;
+                if ($user->uid == 1 || user_access('administer stanford r25')) {
+                    $can_cancel = true;
+                } else {
+                    $scheduler_email = '';
+                    $description = $items[$key]['tip'];
+                    $mailto_pos = strpos($description, '"mailto:');
+                    if ($mailto_pos !== false) {
+                        $mailto_endpos = strpos($description, '"', $mailto_pos + 8);
+                        if ($mailto_endpos !== false) {
+                            $scheduler_email = substr($description, $mailto_pos + 8, $mailto_endpos - ($mailto_pos + 8));
+                        }
+                    }
+                    if (!empty($scheduler_email)) {
+                        if ($scheduler_email === $user->mail) {
+                            $can_cancel = true;
+                        } else if (!empty($rooms[$_POST['room_id']]['approver_secgroup_emails']) &&
+                            strpos($rooms[$_POST['room_id']]['approver_secgroup_emails'], $scheduler_email) !== false
+                        ) {
+                            $can_cancel = true;
+                        }
+                    }
+                }
+                if ($can_cancel) {
+                    $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '">Click to cancel reservation</a>';
+                }
             }
         }
     }
