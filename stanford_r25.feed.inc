@@ -156,8 +156,7 @@ function _stanford_r25_feed()
                 if ($can_cancel) {
                     $event_items = 0;
                     if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
-                    $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] .
-                        '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items . '">Click to cancel reservation</a>';
+                    $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to cancel reservation</a>';
                 }
             }
         }
