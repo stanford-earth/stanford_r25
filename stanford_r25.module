@@ -101,10 +101,10 @@ function stanford_r25_menu()
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.feed.inc',
     );
-    $items['r25/%/cancel_reservation/%'] = array(
+    $items['r25/%/cancel_reservation/%/%/%'] = array(
         'title' => 'Cancel Reservation',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_cancel_reservation',1,3),
+        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4,5,6),
         'access arguments' => array('book r25 rooms'),
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.pages.inc',
@@ -509,7 +509,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         } else {
             $result = array('vals' => $vals, 'index' => $index);
         }
-        if ($command = 'event-get') {
+        if ($command == 'event-get') {
             $result['raw-xml'] = $output->data;
         }
     }

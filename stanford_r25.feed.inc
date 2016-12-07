@@ -33,6 +33,7 @@ function _stanford_r25_feed()
     $results = _stanford_r25_api_call('feed', null, null, $args);
     if ($results && !empty($results['index']['R25:RESERVATION_ID'])) {
         // for each result, store the data in the return array
+        $event_count = array();
         foreach ($results['index']['R25:RESERVATION_ID'] as $key => $value) {
             $id = $results['vals'][$value]['value'];
             $event_id = _stanford_r25_feed_get_value($results, 'R25:EVENT_ID', $key);
@@ -55,6 +56,11 @@ function _stanford_r25_feed()
                 'scheduled_by' => '',
                 'tip' => '',
             );
+            if (isset($event_count[$event_id])) {
+                $event_count[$event_id] += 1;
+            } else {
+                $event_count[$event_id] = 1;
+            }
         }
 
         // for logged in users, we want to display event status, headcount, and who did the booking
@@ -148,7 +154,10 @@ function _stanford_r25_feed()
                     }
                 }
                 if ($can_cancel) {
-                    $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '">Click to cancel reservation</a>';
+                    $event_items = 0;
+                    if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
+                    $items[$key]['tip'] .= '<br /><a href="/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] .
+                        '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items . '">Click to cancel reservation</a>';
                 }
             }
         }

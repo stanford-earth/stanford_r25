@@ -666,33 +666,12 @@ function stanford_r25_reservation_submit($form, &$form_state)
     unset($form_state['storage']['stanford_r25_booking']);
 }
 
-function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_id) {
-    $result = _stanford_r25_user_can_cancel($room_id, $event_id);
-    if (!$result) {
-        //return MENU_ACCESS_DENIED;
-        drupal_access_denied();
-    } else {
-        $xml_string = '<?xml version="1.0" encoding="UTF-8"?><r25:events ';
-        foreach ($result['vals'][0]['attributes'] as $key => $value) {
-            $xml_string .= $key . '='.$value . ' ';
-        }
-        $xml_string .= '><r25:event ';
-        foreach ($result['vals'][1]['attributes'] as $key => $value) {
-            if ($key == 'STATUS') {
-                $value = '"mod"';
-            }
-            $xml_string .= $key . '=' . $value . ' ';
-        }
-        //$xml_string .= '><r25:event_id>'.$event_id.'</r25:event_id>
-        $xml_string .= '><r25:state>1</r25:state></r25:event></r25:events>';
-        if (empty($form_state['storage'])) $form_state['storage'] = array();
-        $form_state['storage']['event_xml'] = $xml_string;
-        $form_state['storage']['room_id'] = $room_id;
-        $form_state['storage']['event_id'] = $event_id;
+function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_id, $start, $title, $event_count) {
+    if (empty($form_state['input'])) {
         $rooms = _stanford_r25_room_config_load();
         $msg = 'Do you want to cancel reservation "';
-        if (!empty($result['index']['R25:EVENT_NAME']) && is_array($result['index']['R25:EVENT_NAME'])) {
-            $msg .= $result['vals'][$result['index']['R25:EVENT_NAME'][0]]['value'];
+        if (!empty($title)) {
+            $msg .= check_plain($title);
         } else {
             $msg .= $event_id;
         }
@@ -700,24 +679,105 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
         if (!empty($rooms[$room_id]['display_name'])) {
             $msg .= ' in room ' . $rooms[$room_id]['display_name'];
         }
-        if (!empty($result['index']['R25:EVENT_START_DT']) && is_array($result['index']['R25:EVENT_START_DT'])) {
-            if (!empty($result['vals'][$result['index']['R25:EVENT_START_DT'][0]]['value'])) {
-                $startdate = DateTime::createFromFormat(DATE_W3C, $result['vals'][$result['index']['R25:EVENT_START_DT'][0]]['value']);
+        if (!empty($start)) {
+            $startdate = DateTime::createFromFormat(DATE_W3C,$start);
                 $msg .= ' for ' . $startdate->format("l, F j, Y g:i a");
-            }
         }
         $msg .= '? <br />';
+        $form['room_id'] = array(
+            '#type' => 'hidden',
+            '#value' => $room_id,
+        );
+        $form['event_id'] = array(
+            '#type' => 'hidden',
+            '#value' => $event_id,
+        );
         $form['really'] = array(
             '#markup' => t($msg),
         );
-        $form = confirm_form($form,'Cancel Reservation','r25/'.$room_id.'/calendar',null,'Cancel Reservation','Go Back to Calendar','cancel_res');
-        return $form;
+        if ($event_count > 1) {
+            $form['series'] = array(
+                '#type' => 'radios',
+                '#default_value' => 1,
+                '#options' => array(1 => 'Cancel this occurrence', 2 => 'Cancel entire series'),
+            );
+        } else {
+            $form['series'] = array(
+                '#type' => 'hidden',
+                '#value' => 2,
+            );
+        }
+    } else {
+        $result = _stanford_r25_user_can_cancel($room_id, $event_id);
+        if (!$result) {
+            drupal_access_denied();
+        } else {
+            $xml_string = $result['raw-xml'];
+            $find_str = 'status="est"';
+            if ($form_state['input']['series'] == 1) {
+                $reservation_id = 0;
+                if (!empty($result['index']['R25:RESERVATION_START_DT']) &&
+                    is_array($result['index']['R25:RESERVATION_START_DT']))
+                {
+                    foreach ($result['index']['R25:RESERVATION_START_DT'] as $key => $value) {
+                        if (!empty($result['vals'][$value]['value']) &&
+                            $start == $result['vals'][$value]['value']) {
+                            $reskey = $result['index']['R25:RESERVATION_ID'][$key];
+                            $reservation_id = $result['vals'][$reskey]['value'];
+                            break;
+                        }
+                    }
+                    if ($reservation_id > 0) {
+                        $resptr1 = strpos($xml_string,'<r25:reservation_id>'.$reservation_id);
+                        if ($resptr1 !== false) {
+                            $pos = strpos($xml_string, $find_str);
+                            if ($pos !== false) {
+                                $xml_string = substr_replace($xml_string, 'status="mod"', $pos, strlen($find_str));
+                            }
+                            $proptr = strpos($xml_string, '<r25:profile');
+                            if ($proptr !== false) {
+                                $pos = strpos($xml_string, $find_str, $proptr);
+                                if ($pos !== false) {
+                                    $xml_string = substr_replace($xml_string, 'status="mod"', $pos, strlen($find_str));
+                                }
+                            }
+                            $temp1 = substr($xml_string,0,$resptr1);
+                            $resptr2 = strrpos($temp1,$find_str);
+                            if ($resptr2 !== false) {
+                                $xml_string = substr($xml_string,0,$resptr2) . 'status="mod"'.substr($xml_string,$resptr2+12);
+                            }
+                            $resptr2 = strpos($xml_string,'<r25:reservation_state>',$resptr1);
+                            $resptr3 = strpos($xml_string,'</r25:reservation_state>',$resptr1);
+                            if ($resptr2 !== false && $resptr3 !== false) {
+                                $xml_string = substr_replace($xml_string,'<r25:reservation_state>99</r25:reservation_state>', $resptr2, $resptr3 + 24 - $resptr2);
+                            }
+                        }
+                    }
+                }
+            } else if ($form_state['input']['series'] == 2) {
+                $pos = strpos($xml_string, $find_str);
+                if ($pos !== false) {
+                    $xml_string = substr_replace($xml_string, 'status="mod"', $pos, strlen($find_str));
+                }
+                $pos1 = strpos($xml_string, '<r25:state>');
+                $pos2 = strpos($xml_string, '</r25:state>');
+                if ($pos1 !== false && $pos2 !== false) {
+                    $xml_string = substr_replace($xml_string, '<r25:state>99</r25:state>', $pos1, $pos2 + 12 - $pos1);
+                }
+            }
+            if (empty($form_state['storage'])) $form_state['storage'] = array();
+            $form_state['storage']['event_xml'] = $xml_string;
+            $form_state['storage']['room_id'] = $room_id;
+            $form_state['storage']['event_id'] = $event_id;
+        }
     }
+    $form = confirm_form($form, 'Cancel Reservation', 'r25/' . $room_id . '/calendar', null, 'Cancel Reservation', 'Go Back to Calendar', 'cancel_res');
+    return $form;
 }
 
 function _stanford_r25_cancel_reservation_submit($form, &$form_state) {
     if (!empty($form_state['storage']['event_xml'])) {
         _stanford_r25_api_call('event-put',null, null, $form_state['storage']['event_xml'],$form_state['storage']['event_id']);
     }
-    drupal_goto('/r25/'.$form_state['storage']['room_id']['/calendar']);
+    drupal_goto('/r25/'.$form_state['storage']['room_id'].'/calendar');
 }
