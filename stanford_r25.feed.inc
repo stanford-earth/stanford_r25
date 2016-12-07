@@ -130,9 +130,14 @@ function _stanford_r25_feed()
                 }
                 drupal_alter('stanford_r25_contact', $items[$key]['tip']);
                 $can_cancel = false;
+                $can_manage = false;
                 global $user;
                 if ($user->uid == 1 || user_access('administer stanford r25')) {
                     $can_cancel = true;
+                    $can_manage = true;
+                } else if (!empty($rooms[$POST['room_id']]['approver_secgroup_emails']) &&
+                    strpos($rooms[$POST['room_id']]['approver_secgroup_emails'],$user->mail) !== false) {
+                    $can_manage = true;
                 } else {
                     $scheduler_email = '';
                     $description = $items[$key]['tip'];
@@ -143,20 +148,17 @@ function _stanford_r25_feed()
                             $scheduler_email = substr($description, $mailto_pos + 8, $mailto_endpos - ($mailto_pos + 8));
                         }
                     }
-                    if (!empty($scheduler_email)) {
-                        if ($scheduler_email === $user->mail) {
+                    if (!empty($scheduler_email) && $scheduler_email === $user->mail) {
                             $can_cancel = true;
-                        } else if (!empty($rooms[$_POST['room_id']]['approver_secgroup_emails']) &&
-                            strpos($rooms[$_POST['room_id']]['approver_secgroup_emails'], $scheduler_email) !== false
-                        ) {
-                            $can_cancel = true;
-                        }
                     }
                 }
+                $event_items = 0;
+                if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
                 if ($can_cancel) {
-                    $event_items = 0;
-                    if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
                     $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to cancel reservation</a>';
+                }
+                if ($can_manage) {
+                    $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/manage_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to Manage reservation</a>';
                 }
             }
         }
