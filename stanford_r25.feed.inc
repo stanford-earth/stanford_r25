@@ -154,11 +154,10 @@ function _stanford_r25_feed()
                 }
                 $event_items = 0;
                 if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
-                if ($can_cancel) {
-                    $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to cancel reservation</a>';
-                }
                 if ($can_manage) {
-                    $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/manage_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to Manage reservation</a>';
+                    $items[$key]['tip'] .= '<br /><a href="https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $items[$key]['event_id'] . '">Click to manage in 25Live</a>';
+                } else if ($can_cancel) {
+                    $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to cancel reservation</a>';
                 }
             }
         }

@@ -156,10 +156,6 @@ function _se3_hartley_form_submit($form, &$form_state) {
         $dates = $form_state['storage']['stanford_r25_postprocess']['dates'];
         $mail_list = $form_state['storage']['stanford_r25_postprocess']['mailto'];
 
-        // remove from share
-        global $user;
-        if ($user->uid == 1) $mail_list = 'kenneth.sharp@stanford.edu';
-
         $subject =  $room['display_name'] .': Your booking request is now pending approval';
         $body = array();
         $body[] = 'The Hartley booking manager will review your request as soon as possible, and you will receive email notification upon approval.';

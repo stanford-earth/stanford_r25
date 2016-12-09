@@ -652,15 +652,6 @@ function stanford_r25_reservation_submit($form, &$form_state)
             $body[] = 'failed reservation at: https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $event_id;
             _stanford_r25_api_call('delete', null, null, $event_id);
         }
-
-        //remove from share
-        $xyz = print_r($result, TRUE);
-        $body[] = 'failed reservation. no event id. results:<pre>' . $xyz . '</pre>';
-        drupal_mail('stanford_r25', $event_id, 'ksharp@stanford.edu', language_default(), array(
-            'body' => $body,
-            'subject' => 'r25 reservation failure'
-        ));
-
     }
     // remove the storage we set up in validate
     unset($form_state['storage']['stanford_r25_booking']);
@@ -785,6 +776,14 @@ function _stanford_r25_cancel_reservation_submit($form, &$form_state) {
 function _stanford_r25_manage_reservation($form, &$form_state, $room_id, $event_id, $start, $title, $event_count) {
     if (empty($form_state['input'])) {
         $rooms = _stanford_r25_room_config_load();
+        $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
+        $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display, $can_book['external_acct']);
+        $result = _stanford_r25_user_can_cancel($room_id, $event_id);
+        if (!$result) {
+            drupal_access_denied();
+        } else {
+            watchdog('debug','meh');
+        }
         $msg = 'Do you want to Approve or Cancel reservation "';
         if (!empty($title)) {
             $msg .= check_plain($title);
