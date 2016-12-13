@@ -1,5 +1,17 @@
 <?php
 
+function se3_hartley_menu() {
+    $items = array();
+    $items['hartley_download'] = array(
+        'title' => 'Download Hartley Spreadsheet',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('se3_hartley_download'),
+        'access arguments' => array('administer stanford r25'),
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
 function _se3_hartley_is_se3_user() {
     global $user;
     $se3_user = false;
@@ -229,4 +241,86 @@ function se3_hartley_stanford_r25_isbillable_alter(&$is_billable) {
             $is_billable = false;
         }
     }
+}
+
+function se3_hartley_download($form, &$form_state) {
+
+    $curMonth = intval(date('n')) - 1;
+    $form['se3_hartley_download_month'] = array(
+        '#type' => 'select',
+        '#title' => t('Month'),
+        '#options' => array('January','February','March','April','May','June','July','August','September','October',
+            'November','December'),
+        '#default_value' => $curMonth,
+        '#required' => true,
+    );
+
+    $year_array = array();
+    $curYear = intval(date('Y'));
+    for ($year = 2016; $year <= $curYear; $year++) {
+        $year_array[$year] = strval($year);
+    }
+
+    $form['se3_hartley_download_year'] = array(
+        '#type' => 'select',
+        '#title' => t('Year'),
+        '#options' => $year_array,
+        '#default_value' => $year_array[$curYear],
+        '#required' => true,
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Download'),
+    );
+
+    return $form;
+}
+
+function se3_hartley_download_validate($form, &$form_state) {
+    if (empty($form_state['values']['se3_hartley_download_year']) ||
+        empty($form_state['values']['se3_hartley_download_month']) ||
+        intval($form_state['values']['se3_hartley_download_year']) < 2016 ||
+        intval($form_state['values']['se3_hartley_download_month']) < 0 ||
+        intval($form_state['values']['se3_hartley_download_month']) > 11) {
+        form_set_error('se3_hartley_download','Please choose a valid month and year.');
+    } else if (intval($form_state['values']['se3_hartley_download_year'] == 2016) &&
+        intval($form_state['values']['se3_hartley_download_month']) < 11) {
+        form_set_error('se3_hartley_download', 'Downloads are not available prior to December 2016');
+    }
+}
+
+function se3_hartley_download_submit($form, &$form_state) {
+    module_load_include('module','stanford_r25');
+
+    $space_id = 1861;
+    $year = intval($form_state['values']['se3_hartley_download_year']);
+    $month = intval($form_state['values']['se3_hartley_download_month']) + 1;
+    $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+    $start = strval($year) . strval($month) . '01';
+    $end = strval($year). strval($month) . strval($days);
+    $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
+    $results = _stanford_r25_api_call('download', null, null, $args);
+    $output = array();
+    foreach ($results['index']['R25:RESERVATION_TYPE'] as $key => $value) {
+        $output[] = array('type'=>$results['vals'][$value]['value'],
+            'start'=>$results['vals'][$results['index']['R25:RESERVATION_START_DT'][$key]]['value'],
+            'end'=>$results['vals'][$results['index']['R25:RESERVATION_END_DT'][$key]]['value'],
+            'state'=>$results['vals'][$results['index']['R25:RESERVATION_STATE'][$key]]['value'],
+            'space'=>$results['vals'][$results['index']['R25:SPACE_NAME'][$key]]['value'],
+            'event'=>$results['vals'][$results['index']['R25:EVENT_NAME'][$key]]['value'],
+            'event_state'=>$results['vals'][$results['index']['R25:STATE_NAME'][$key]]['value'],
+            );
+    }
+    $xyz = print_r($output,true);
+    $output = 'results <pre>' . $xyz . '</pre>';
+    $attribs = array();
+    foreach ($results['index']['R25:ATTRIBUTE_NAME'] as $key => $value) {
+        $attribs[] = array('name' => $results['vals'][$value]['value'],
+            'value' => $results['vals'][$results['index']['R25:ATTRIBUTE_VALUE'][$key]]['value'],
+            );
+    }
+    $xyz = print_r($attribs,true);
+    $output .=  'attribs <pre>' . $xyz . '</pre>';
+    watchdog('debug',$output);
 }

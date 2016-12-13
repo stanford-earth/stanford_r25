@@ -472,6 +472,9 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         case 'billing-put':
             $xml_command = 'event.xml?event_id=' . $id . '&include=billing+history';
             break;
+        case 'download':
+            $xml_command = 'rm_reservations.xml?' . $post_data . '&include=pending+text+attributes';
+            break;
         default:
             $xml_command = 'null.xml';
     }
