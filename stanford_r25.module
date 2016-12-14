@@ -484,7 +484,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
     // depending on what we're doing, the HTTP method will be GET, POST, or DELETE
     $method = 'GET';
     $options = array();
-    if ($command == 'reserve' || $command == 'calc_price') {
+    if ($command == 'reserve') {
         // $post_data contains the XML for a reservation request
         $method = 'POST';
         $options['data'] = $post_data;
@@ -506,7 +506,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         // if $output is false, report an http error
         $http_error = 'HTTP Request Error: ' . $output->error;
         watchdog('stanford_r25', $http_error);
-    } else if ($command == 'roomphoto' || $command == 'billing-get') {
+    } else if ($command == 'roomphoto') {
         $result = $output->data;
     } else {
         // if we have output, parse it and create an array to return
@@ -520,7 +520,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
         } else {
             $result = array('vals' => $vals, 'index' => $index);
         }
-        if ($command == 'event-get') {
+        if ($command == 'event-get' || $command == 'billing-get') {
             $result['raw-xml'] = $output->data;
         }
     }

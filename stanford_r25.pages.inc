@@ -549,7 +549,8 @@ function stanford_r25_reservation_submit($form, &$form_state)
             $billable = true;
             drupal_alter('stanford_r25_isbillable',$billable);
             if ($billable) {
-                $billing_xml = _stanford_r25_api_call('billing-get', null, null, $eventid);
+                $billing_get = _stanford_r25_api_call('billing-get', null, null, $eventid);
+                $billing_xml = $billing_get['raw-xml'];
                 $est_ptr = strpos($billing_xml, 'status="est"');
                 $billing_xml = substr($billing_xml, 0, $est_ptr) . 'status="mod"' . substr($billing_xml, $est_ptr + 12);
                 $space_code = strpos($billing_xml,$form_state['storage']['stanford_r25_booking']['room']['space_id']);

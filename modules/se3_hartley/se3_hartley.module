@@ -290,37 +290,142 @@ function se3_hartley_download_validate($form, &$form_state) {
     }
 }
 
+function _se3_hartley_get_value($result, $key, $attrib) {
+    $value = '';
+    if (!empty($result['vals'][$result['index'][$attrib][$key]]['value'])) {
+        $value = $result['vals'][$result['index'][$attrib][$key]]['value'];
+    }
+    return $value;
+}
+
+/**
+ * @param $form
+ * @param $form_state
+ */
 function se3_hartley_download_submit($form, &$form_state) {
     module_load_include('module','stanford_r25');
 
-    $space_id = 1861;
     $year = intval($form_state['values']['se3_hartley_download_year']);
     $month = intval($form_state['values']['se3_hartley_download_month']) + 1;
     $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
     $start = strval($year) . strval($month) . '01';
     $end = strval($year). strval($month) . strval($days);
-    $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
-    $results = _stanford_r25_api_call('download', null, null, $args);
     $output = array();
-    foreach ($results['index']['R25:RESERVATION_TYPE'] as $key => $value) {
-        $output[] = array('type'=>$results['vals'][$value]['value'],
-            'start'=>$results['vals'][$results['index']['R25:RESERVATION_START_DT'][$key]]['value'],
-            'end'=>$results['vals'][$results['index']['R25:RESERVATION_END_DT'][$key]]['value'],
-            'state'=>$results['vals'][$results['index']['R25:RESERVATION_STATE'][$key]]['value'],
-            'space'=>$results['vals'][$results['index']['R25:SPACE_NAME'][$key]]['value'],
-            'event'=>$results['vals'][$results['index']['R25:EVENT_NAME'][$key]]['value'],
-            'event_state'=>$results['vals'][$results['index']['R25:STATE_NAME'][$key]]['value'],
-            );
+
+    foreach (array('1675','1860','1861') as $space_id) {
+        $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
+        $result = _stanford_r25_api_call('download', null, null, $args);
+        $space_output = array();
+        if ($result && !empty($result['index']['R25:RESERVATION_ID']) &&
+            is_array($result['index']['R25:RESERVATION_ID'])) {
+            foreach ($result['index']['R25:RESERVATION_ID'] as $key => $value) {
+                $space_output[] = array(
+                    'start' => _se3_hartley_get_value($result, $key, 'R25:RESERVATION_START_DT'),
+                    'end' => _se3_hartley_get_value($result, $key, 'R25:RESERVATION_END_DT'),
+                    'space' => _se3_hartley_get_value($result, $key, 'R25:SPACE_NAME'),
+                    'event' => _se3_hartley_get_value($result, $key, 'R25:EVENT_NAME'),
+                    'count' => _se3_hartley_get_value($result, $key, 'R25:EXPECTED_COUNT'),
+                    'event_state' => _se3_hartley_get_value($result, $key, 'R25:STATE_NAME'),
+                    'event_id' => _se3_hartley_get_value($result, $key, 'R25:EVENT_ID'),
+                    'key' => $value,
+                    'cost' => 0,
+                    'contact' => '',
+                    'pta_number' => '',
+                    'pta_auth' => '',
+                    'food' => '',
+                    'billable' => '',
+                    'cleanup' => '',
+                    'first_time' => '',
+                );
+            }
+
+            if (!empty($result['index']['R25:ATTRIBUTE_NAME']) && is_array($result['index']['R25:ATTRIBUTE_NAME'])) {
+                foreach ($result['index']['R25:ATTRIBUTE_NAME'] as $key => $value) {
+                    $reverse = array_reverse($space_output, true);
+                    foreach ($reverse as $idx_key => $idx_val) {
+                        if ($value > $reverse[$idx_key]['key']) {
+                            $output_key = '';
+                            switch ($result['vals'][$value]['value']) {
+                                case 'SE3 Booking Contact Info':
+                                    $output_key = 'contact';
+                                    break;
+                                case 'SE3 Hartley PTA':
+                                    $output_key = 'pta_number';
+                                    break;
+                                case 'SE3 Hartley Signature Authority':
+                                    $output_key = 'pta_auth';
+                                    break;
+                                case 'SE3 Hartley Food':
+                                    $output_key = 'food';
+                                    break;
+                                case 'SE3 Hartley Billable':
+                                    $output_key = 'billable';
+                                    break;
+                                case 'SE3 Hartley Cleanup':
+                                    $output_key = 'cleanup';
+                                    break;
+                                case 'SE3 Hartley First Time User':
+                                    $output_key = 'first_time';
+                                    break;
+                            }
+                            if (!empty($output_key)) {
+                                $space_output[$idx_key][$output_key] =
+                                    $result['vals'][$result['index']['R25:ATTRIBUTE_VALUE'][$key]]['value'];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        $output = array_merge($output, $space_output);
     }
-    $xyz = print_r($output,true);
-    $output = 'results <pre>' . $xyz . '</pre>';
-    $attribs = array();
-    foreach ($results['index']['R25:ATTRIBUTE_NAME'] as $key => $value) {
-        $attribs[] = array('name' => $results['vals'][$value]['value'],
-            'value' => $results['vals'][$results['index']['R25:ATTRIBUTE_VALUE'][$key]]['value'],
-            );
+
+    foreach ($output as $idx => $reservation) {
+        if (!empty($reservation['billable']) &&
+            $reservation['billable'] == 'T') {
+            $eventid = $reservation['event_id'];
+            $result = _stanford_r25_api_call('billing-get', null, null, $eventid);
+            if ($result) {
+                if (!empty($result['index']['R25:BILL_ITEM_TYPE_NAME']) &&
+                    is_array($result['index']['R25:BILL_ITEM_TYPE_NAME'])
+                ) {
+                    foreach ($result['index']['R25:BILL_ITEM_TYPE_NAME'] as $key => $value) {
+                        if (!empty($result['vals'][$value]['value']) &&
+                            $result['vals'][$value]['value'] === 'GRAND TOTAL'
+                        ) {
+                            if (!empty($result['index']['R25:TOTAL_CHARGE'][$key]) &&
+                                !empty($result['vals'][$result['index']['R25:TOTAL_CHARGE'][$key]]['value'])) {
+                                $output[$idx]['cost'] =
+                                    $result['vals'][$result['index']['R25:TOTAL_CHARGE'][$key]]['value'];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
-    $xyz = print_r($attribs,true);
-    $output .=  'attribs <pre>' . $xyz . '</pre>';
-    watchdog('debug',$output);
+
+    if (empty($output)) {
+        drupal_set_message('No reservations were found.','error');
+    } else {
+        header('Content-Type: application/excel');
+        header('Content-Disposition: attachment; filename="hartley_'.$year.'_'.$month.'.csv"');
+        $mc_array = array('Event Name', 'Location','Start Date','End Date','Confirmed?','Contact',
+            'PTA Number','PTA Auth','Cost','Attendees','Food','Cleanup','Billable','First Time');
+        $fp = fopen('php://output', 'w');
+        fputcsv($fp, $mc_array);
+        foreach ($output as $res) {
+            $mc_array = array(
+                $res['event'],$res['space'],$res['start'],$res['end'],$res['event_state'],$res['contact'],
+                $res['pta_number'],$res['pta_auth'],$res['cost'],$res['count'],$res['food'],$res['cleanup'],
+                $res['billable'],$res['first_time'],
+            );
+            fputcsv($fp, $mc_array, ',', '"');
+        }
+        fclose($fp);
+        exit;
+        //drupal_set_message('Reservation download complete!');
+    }
 }
