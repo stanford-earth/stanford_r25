@@ -683,17 +683,32 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
     return $output;
 }
 
-function _stanford_r25_security_group_emails($secgroup_id = null) {
-    $secgroup_emails = '';
-    if (!empty($secgroup_id)) {
-        $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
-        if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
-            foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
-                if (!empty($sec_result['vals'][$value]['value'])) {
-                    $secgroup_emails .= $sec_result['vals'][$value]['value'] . ', ';
-                 }
+function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false)
+{
+    if (empty($secgroup)) return false;
+    $cache_id = 'stanford_r25:approvers:' . $secgroup;
+    if ($reset) {
+        $list = '';
+    } else {
+        $list = &drupal_static(__FUNCTION__);
+        if (!$list) {
+            $cache = cache_get($cache_id, 'stanford_r25_cache');
+            if ($cache && !empty($cache->data)) {
+                $list = $cache->data;
+                return $list;
             }
         }
     }
-    return $secgroup_emails;
+    $list = '';
+    $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
+    if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
+        foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
+            if (!empty($sec_result['vals'][$value]['value'])) {
+                $list .= $sec_result['vals'][$value]['value'] . ', ';
+            }
+        }
+    }
+    if (empty($list)) return false;
+    cache_set($cache_id,$list,'stanford_r25_cache');
+    return $list;
 }
