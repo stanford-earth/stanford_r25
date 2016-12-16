@@ -31,6 +31,12 @@ function _stanford_r25_feed()
     if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
         $approver_list = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
     }
+    $approver = false;
+    global $user;
+    if ($user->uid == 1 || user_access('administer stanford r25') ||
+        ($user->uid > 0 && in_array($user->mail,$approver_list))) {
+        $approver = true;
+    }
     $start = str_replace('-', '', $_POST['start']);
     $end = str_replace('-', '', $_POST['end']);
     $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
@@ -112,8 +118,8 @@ function _stanford_r25_feed()
                         $index -= 1;
                         if (intval($value) > intval($items[$index]['index'])) {
                             // display event description as event title if room is so marked
-                            if (isset($rooms[$_POST['room_id']]['description_as_title']) &&
-                                intval($rooms[$_POST['room_id']]['description_as_title']) == 1) {
+                            if (isset($rooms[$room_id]['description_as_title']) &&
+                                intval($rooms[$room_id]['description_as_title']) == 1) {
                                 $items[$index]['title'] = drupal_html_to_text($text);
                             }
                             $items[$index]['description'] = $text;
@@ -136,15 +142,7 @@ function _stanford_r25_feed()
                 }
                 drupal_alter('stanford_r25_contact', $items[$key]['tip']);
                 $can_cancel = false;
-                $can_manage = false;
-                global $user;
-                if ($user->uid == 1 || user_access('administer stanford r25')) {
-                    $can_cancel = true;
-                    $can_manage = true;
-                } else if (!empty($rooms[$POST['room_id']]['approver_secgroup_emails']) &&
-                    strpos($rooms[$POST['room_id']]['approver_secgroup_emails'],$user->mail) !== false) {
-                    $can_manage = true;
-                } else {
+                if (!$approver) {
                     $scheduler_email = '';
                     $description = $items[$key]['tip'];
                     $mailto_pos = strpos($description, '"mailto:');
@@ -155,12 +153,12 @@ function _stanford_r25_feed()
                         }
                     }
                     if (!empty($scheduler_email) && $scheduler_email === $user->mail) {
-                            $can_cancel = true;
+                        $can_cancel = true;
                     }
                 }
                 $event_items = 0;
                 if (!empty($event_count[$items[$key]['event_id']])) $event_items = $event_count[$items[$key]['event_id']];
-                if ($can_manage) {
+                if ($approver) {
                     $items[$key]['tip'] .= '<br /><a href="https://25live.collegenet.com/stanford/#details&obj_type=event&obj_id=' . $items[$key]['event_id'] . '">Click to manage in 25Live</a>';
                 } else if ($can_cancel) {
                     $items[$key]['tip'] .= '<br /><a href="'.url('/r25/' . $_POST['room_id'] . '/cancel_reservation/' . $items[$key]['event_id'] . '/' . $items[$key]['start'] . '/' . $items[$key]['title'] . '/' . $event_items) . '">Click to cancel reservation</a>';

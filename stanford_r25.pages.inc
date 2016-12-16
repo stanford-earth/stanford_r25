@@ -416,30 +416,23 @@ function stanford_r25_reservation_submit($form, &$form_state)
         return;
     }
 
-    $secgroup_id = intval($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id']);
     $mail_list = '';
     $todo_insert = '';
-    if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE && $secgroup_id > 0) {
-        $todo_str = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_todo.xml');
-        $result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
-        if (!empty($result['index']['R25:CONTACT_ID'])) {
-            foreach ($result['index']['R25:CONTACT_ID'] as $key => $value) {
-                if (!empty($result['vals'][$value]['value'])) {
-                    $todo_temp = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $todo_str);
-                    $todo_temp = str_replace('[r25_approver_id]', $result['vals'][$value]['value'], $todo_temp);
-                    $todo_temp = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $todo_temp);
-                    $todo_insert .= $todo_temp;
+    if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE &&
+        !empty($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id'])) {
+        $approver_list =
+            _stanford_r25_security_group_emails($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id']);
+        if (!empty($approver_list)) {
+            $todo_str = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_todo.xml');
+            foreach ($approver_list as $key => $value) {
+                $todo_temp = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $todo_str);
+                $todo_temp = str_replace('[r25_approver_id]', $key, $todo_temp);
+                $todo_temp = str_replace('[r25_credential_id]', variable_get('stanford_r25_credential_contact_id', ''), $todo_temp);
+                $todo_insert .= $todo_temp;
+                if (!empty($mail_list)) {
+                    $mail_list .= ', ';
                 }
-            }
-        }
-        if (!empty($result['index']['R25:PRIMARY_EMAIL'])) {
-            foreach ($result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
-                if (!empty($result['vals'][$value]['value'])) {
-                    if (!empty($mail_list)) {
-                        $mail_list .= ', ';
-                    }
-                    $mail_list .= $result['vals'][$value]['value'];
-                }
+                $mail_list .= $value;
             }
         }
     }

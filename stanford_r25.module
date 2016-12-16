@@ -700,10 +700,15 @@ function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false
     }
     $list = array();
     $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
-    if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
-        foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
+    if (!empty($sec_result['index']['R25:CONTACT_ID']) && is_array($sec_result['index']['R25:CONTACT_ID'])) {
+        foreach ($sec_result['index']['R25:CONTACT_ID'] as $key => $value) {
             if (!empty($sec_result['vals'][$value]['value'])) {
-                $list[] = $sec_result['vals'][$value]['value'] . ', ';
+                $email = '';
+                if (!empty($sec_result['index']['R25:PRIMARY_EMAIL'][$key]) &&
+                    !empty($sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'])) {
+                    $email = $sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'];
+                }
+                $list[$sec_result['vals'][$value]['value']] = $email;
             }
         }
     }
