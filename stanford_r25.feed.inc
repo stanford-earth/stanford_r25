@@ -19,11 +19,17 @@ function _stanford_r25_feed()
 
     // format the request to the 25Live API
     $rooms = _stanford_r25_room_config_load();
+    $room_id = '';
     $space_id = null;
     if (!empty($_POST['room_id']) && !empty($rooms[$_POST['room_id']]['space_id'])) {
+        $room_id = $_POST['room_id'];
         $space_id = $rooms[$_POST['room_id']]['space_id'];
     } else {
         drupal_not_found();
+    }
+    $approver_list = array();
+    if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
+        $approver_list = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
     }
     $start = str_replace('-', '', $_POST['start']);
     $end = str_replace('-', '', $_POST['end']);

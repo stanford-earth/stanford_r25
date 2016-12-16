@@ -411,7 +411,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
-            'postprocess_booking' => 0, 'auto_billing_code' => '', 'approver_secgroup_emails' => '',
+            'postprocess_booking' => 0, 'auto_billing_code' => '',
             'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
@@ -631,7 +631,12 @@ function _stanford_r25_room_config_validate($form, &$form_state)
         $form_state['values']['approver_secgroup_id'] = _stanford_r25_secgroup_id($form_state['values']['approver_secgroup_name']);
         if (empty($form_state['values']['approver_secgroup_id'])) {
             form_set_error('approver_secgroup_name', 'Unable to retrieve security group id from 25Live.');
-         }
+        } else {
+            $list =  _stanford_r25_security_group_emails($form_state['values']['approver_secgroup_id'],true);
+            if (empty($list)) {
+                form_set_error('approver_secgroup_name','Unable to retrieve security group email list from 25Live.');
+            }
+        }
     }
 }
 
@@ -655,7 +660,6 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'honor_blackouts' => (int)$form_state['values']['honor_blackouts'],
         'approver_secgroup_name' => (string)$form_state['values']['approver_secgroup_name'],
         'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
-        'approver_secgroup_emails' => _stanford_r25_security_group_emails($form_state['values']['approver_secgroup_id']),
         'authentication' => (int)$form_state['values']['authentication'],
         'multi_day' => (int)$form_state['values']['multi_day'],
         'postprocess_booking' => (int)$form_state['values']['postprocess_booking'],

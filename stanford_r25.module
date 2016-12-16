@@ -276,7 +276,8 @@ function stanford_r25_block_view($delta = "")
                     $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
                     $block['content'] = drupal_render($form);
                 // otherwise, if this room authenticates externally, get the auth link from the external auth module
-                } else if ($rooms[$room_id]['authentication'] > STANFORD_R25_AUTH_DRUPAL_ACCT) {
+                } else if (!empty($rooms[$room_id]['authentication']) && 
+                    $rooms[$room_id]['authentication'] > STANFORD_R25_AUTH_DRUPAL_ACCT) {
                     // present the user with an authentication link to access the room reservation form
                     // but if no module implementing the hook was found we need to put up a message
                     if (empty($can_book['external_module'])) {
@@ -685,30 +686,28 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
 
 function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false)
 {
-    if (empty($secgroup)) return false;
-    $cache_id = 'stanford_r25:approvers:' . $secgroup;
-    if ($reset) {
-        $list = '';
-    } else {
+    if (empty($secgroup_id)) return false;
+    $cache_id = 'stanford_r25:approvers:' . $secgroup_id;
+    if (!$reset) {
         $list = &drupal_static(__FUNCTION__);
         if (!$list) {
-            $cache = cache_get($cache_id, 'stanford_r25_cache');
+            $cache = cache_get($cache_id);
             if ($cache && !empty($cache->data)) {
                 $list = $cache->data;
                 return $list;
             }
         }
     }
-    $list = '';
+    $list = array();
     $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
     if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
         foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
             if (!empty($sec_result['vals'][$value]['value'])) {
-                $list .= $sec_result['vals'][$value]['value'] . ', ';
+                $list[] = $sec_result['vals'][$value]['value'] . ', ';
             }
         }
     }
     if (empty($list)) return false;
-    cache_set($cache_id,$list,'stanford_r25_cache');
+    cache_set($cache_id,$list);
     return $list;
 }
