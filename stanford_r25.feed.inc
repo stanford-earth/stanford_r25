@@ -14,18 +14,33 @@ function _stanford_r25_feed_get_value(&$results, $name, $key)
 
 // This is the ajax function called by FullCalendar with a room id, start date and end date in the POST data.
 // Returns JSON array of event data to FullCalendar
-function _stanford_r25_feed()
+function _stanford_r25_feed($get_room_id = null)
 {
 
     // format the request to the 25Live API
     $rooms = _stanford_r25_room_config_load();
     $room_id = '';
     $space_id = null;
+    $start = '';
+    $end = '';
     if (!empty($_POST['room_id']) && !empty($rooms[$_POST['room_id']]['space_id'])) {
         $room_id = $_POST['room_id'];
         $space_id = $rooms[$_POST['room_id']]['space_id'];
+        $start = str_replace('-', '', $_POST['start']);
+        $end = str_replace('-', '', $_POST['end']);
     } else {
-        drupal_not_found();
+        if (empty($get_room_id) || empty($rooms[$get_room_id]['space_id'])) {
+            drupal_not_found();
+        } else {
+            $room_id = $get_room_id;
+            $space_id = $rooms[$get_room_id]['space_id'];
+            if (!empty($_GET['start'])) {
+                $start = str_replace('-','',$_GET['start']);
+            }
+            if (!empty($_GET['end'])) {
+                $end = str_replace('-','',$_GET['end']);
+            }
+        }
     }
     $approver_list = array();
     if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
@@ -37,8 +52,8 @@ function _stanford_r25_feed()
         ($user->uid > 0 && in_array($user->mail,$approver_list))) {
         $approver = true;
     }
-    $start = str_replace('-', '', $_POST['start']);
-    $end = str_replace('-', '', $_POST['end']);
+    //$start = str_replace('-', '', $_POST['start']);
+    //$end = str_replace('-', '', $_POST['end']);
     $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
     $items = array();
     // make the API call

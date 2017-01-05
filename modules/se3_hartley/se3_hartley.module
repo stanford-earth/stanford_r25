@@ -201,7 +201,7 @@ function _se3_hartley_form_submit($form, &$form_state) {
 function se3_hartley_user_insert(&$edit, $account, $category)
 {      
     global $user;   
-    if ($user->uid !== $account->uid) return;
+    if (!empty($user->uid) && $user->uid > 0 && $user->uid !== $account->uid) return;
                     
     if (module_exists('wmd4') && !empty($edit['is_new']) && !empty($edit['init'])) {
             include_once(drupal_get_path('module','wmd4').'/wmd4.util.inc');
