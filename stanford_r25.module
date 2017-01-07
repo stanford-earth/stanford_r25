@@ -101,18 +101,18 @@ function stanford_r25_menu()
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.feed.inc',
     );
-    $items['r25/%/cancel_reservation/%/%/%'] = array(
+    $items['r25/%/cancel_reservation/%/%'] = array(
         'title' => 'Cancel Reservation',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4,5,6),
+        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4),
         'access arguments' => array('book r25 rooms'),
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.pages.inc',
     );
-    $items['r25/%/manage_reservation/%/%/%'] = array(
-        'title' => 'Manage Reservation',
+    $items['r25/%/confirm_reservation/%/%'] = array(
+        'title' => 'confirm Reservation',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_manage_reservation',1,3,4,5,6),
+        'page arguments' => array('_stanford_r25_confirm_reservation',1,3,4),
         'access arguments' => array('book r25 rooms'),
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.pages.inc',
@@ -462,6 +462,7 @@ function _stanford_r25_api_call($command = null, $url = null, $credential = null
             $xml_command = 'evatrb.xml?attribute_id=' . $post_data;
             break;
         case 'event-get':
+            //$xml_command = 'event.xml?event_id=' . $post_data . '&include=attendees+customers+reservations+text+categories+attributes+workflow+workflow_history+requirements+relationships';
             $xml_command = 'event.xml?event_id=' . $post_data;
             break;
         case 'event-put':
@@ -593,15 +594,21 @@ function _stanford_r25_list_rooms() {
     return $output;
 }
 
-function _stanford_r25_user_can_cancel($room_id, $event_id)
+function _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, $op)
 {
     $result = _stanford_r25_api_call('event-get', null, null, $event_id);
     if ($result) {
+        $rooms = _stanford_r25_room_config_load();
+        if (empty($result['index']['R25:SPACE_ID']) || !is_array($result['index']['R25:SPACE_ID']) ||
+            $result['vals'][$result['index']['R25:SPACE_ID'][0]]['value'] != $rooms[$room_id]['space_id']) {
+            drupal_set_message('Room mismatch for confirm or cancel event.','error',false);
+            return false;
+        }
         $can_cancel = false;
         global $user;
         if ($user->uid == 1 || user_access('administer stanford r25')) {
             $can_cancel = true;
-        } else if (!empty($user->mail)) {
+        } else if (!empty($user->mail) && $op === 'cancel') {
             // see if requestor email matches or is quickbook
             $quickbook_id = intval(variable_get('stanford_r25_credential_contact_id','0'));
             $scheduler_id = 0;
@@ -656,19 +663,9 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
         // if $can_cancel is false, we should check if the user is in a security group that can still be
         // allowed to cancel
         if (!$can_cancel) {
-            $rooms = _stanford_r25_room_config_load();
             if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
-                $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $rooms[$room_id]['approver_secgroup_id']);
-                if (!empty($sec_result['index']['R25:PRIMARY_EMAIL']) && is_array($sec_result['index']['R25:PRIMARY_EMAIL'])) {
-                    foreach ($sec_result['index']['R25:PRIMARY_EMAIL'] as $key => $value) {
-                        if (!empty($sec_result['vals'][$value]['value'])) {
-                            if ($user->mail === $sec_result['vals'][$value]['value']) {
-                                $can_cancel = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                $approvers = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
+                $can_cancel = in_array($user->mail, $approvers);
             }
         }
                 
@@ -686,7 +683,7 @@ function _stanford_r25_user_can_cancel($room_id, $event_id)
 
 function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false)
 {
-    if (empty($secgroup_id)) return false;
+    if (empty($secgroup_id)) return array();
     $cache_id = 'stanford_r25:approvers:' . $secgroup_id;
     if (!$reset) {
         $list = &drupal_static(__FUNCTION__);
@@ -712,7 +709,6 @@ function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false
             }
         }
     }
-    if (empty($list)) return false;
     cache_set($cache_id,$list);
     return $list;
 }

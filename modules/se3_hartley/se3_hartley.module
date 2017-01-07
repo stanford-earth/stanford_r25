@@ -35,6 +35,7 @@ function _se3_hartley_is_se3_user() {
 
 function se3_hartley_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'stanford_r25_reservation') {
+
     if (!empty($form['stanford_r25_booking_roomid']['#value']) && substr($form['stanford_r25_booking_roomid']['#value'],0,3) == 'mh0' ) {
 
       if (empty($form['#validate'])) $form['#validate']= array();

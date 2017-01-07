@@ -411,7 +411,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
             'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
-            'postprocess_booking' => 0, 'auto_billing_code' => '',
+            'postprocess_booking' => 0, 'auto_billing_code' => '', 'email_confirms_and_cancels' => 0,
             'override_booking_instructions' => array('value' => '', 'format' => filter_default_format()));
     }
     $form['display_name'] = array(
@@ -520,6 +520,13 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
         '#size' => 30,
         '#default_value' => $config['approver_secgroup_id'],
         '#description' => t('The corresponding 25Live id number for the security group specified above.'),
+    );
+    $form['email_confirms_and_cancels'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Email cancellations to approvers'),
+        '#return_value' => 1,
+        '#default_value' => $config['email_confirms_and_cancels'],
+        '#description' => t('Check if room approvers should receive an email when a user self-service cancels a reservation.'),
     );
     $form['email_list'] = array(
         '#title' => t('Email List'),
@@ -660,6 +667,7 @@ function _stanford_r25_room_config_submit($form, &$form_state)
         'honor_blackouts' => (int)$form_state['values']['honor_blackouts'],
         'approver_secgroup_name' => (string)$form_state['values']['approver_secgroup_name'],
         'approver_secgroup_id' => (int)$form_state['values']['approver_secgroup_id'],
+        'email_confirms_and_cancels' => (int)$form_state['values']['email_confirms_and_cancels'],
         'authentication' => (int)$form_state['values']['authentication'],
         'multi_day' => (int)$form_state['values']['multi_day'],
         'postprocess_booking' => (int)$form_state['values']['postprocess_booking'],
