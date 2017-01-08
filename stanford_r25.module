@@ -110,9 +110,9 @@ function stanford_r25_menu()
         'file' => 'stanford_r25.pages.inc',
     );
     $items['r25/%/confirm_reservation/%/%'] = array(
-        'title' => 'confirm Reservation',
+        'title' => 'Confirm Reservation',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_confirm_reservation',1,3,4),
+        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4),
         'access arguments' => array('book r25 rooms'),
         'type' => MENU_CALLBACK,
         'file' => 'stanford_r25.pages.inc',

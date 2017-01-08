@@ -675,8 +675,16 @@ function stanford_r25_reservation_submit($form, &$form_state) {
 }
 
 function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_id, $start) {
+    $op = 'cancel';
+    $opout = 'cancellation';
+
+    $cur = current_path();
+    if (strpos($cur,'confirm') !== false) {
+        $op = 'confirm';
+        $opout = 'confirmation';
+    }
   $rooms = _stanford_r25_room_config_load();
-  $result = _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, 'cancel');
+  $result = _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, $op);
   if (!$result) {
     drupal_access_denied();
   }
@@ -690,8 +698,9 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
   ) {
     $event_count = count($result['index']['R25:RESERVATION_START_DT']);
   }
+
   if (empty($form_state['input'])) {
-    $msg = 'Do you want to cancel reservation "';
+    $msg = 'Do you want to ' . $op . ' reservation "';
     if (!empty($title)) {
       $msg .= check_plain($title);
     }
@@ -720,14 +729,36 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
     );
 
     if ($event_count > 1) {
-      $form['series'] = array(
-        '#type' => 'radios',
-        '#default_value' => 1,
-        '#options' => array(
-          1 => 'Cancel this occurrence',
-          2 => 'Cancel entire series'
-        ),
-      );
+        $msg_text = 'This reservation is part of a series. ' . ucfirst($opout) . ' will apply to all dates.<br />';
+        if (!empty($result['index']['R25:RESERVATION_START_DT']) &&
+            is_array($result['index']['R25:RESERVATION_START_DT'])) {
+            $msg_text .= 'Reservation dates: <br/>';
+            foreach ($result['index']['R25:RESERVATION_START_DT'] as $key => $value) {
+                if (!empty($result['vals'][$value]['value'])) {
+                    $s_date = DateTime::createFromFormat(DATE_W3C, $result['vals'][$value]['value']);
+                    $msg_text .= $s_date->format("l, F j, Y g:i a") . '<br />';
+                }
+            }
+            $msg_text .= '<br />';
+        }
+        $form['markup2'] = array(
+            '#markup' => t($msg_text),
+        );
+        if ($op == 'cancel') {
+            $form['series'] = array(
+                '#type' => 'radios',
+                '#default_value' => 1,
+                '#options' => array(
+                    1 => 'Cancel this occurrence',
+                    2 => 'Cancel entire series'
+                ),
+            );
+        } else {
+            $form['series'] = array(
+                '#type' => 'hidden',
+                '#value' => 2,
+            );
+        }
     }
     else {
       $form['series'] = array(
@@ -790,7 +821,8 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
         $pos1 = strpos($xml_string, '<r25:state>');
         $pos2 = strpos($xml_string, '</r25:state>');
         if ($pos1 !== FALSE && $pos2 !== FALSE) {
-          $xml_string = substr_replace($xml_string, '<r25:state>99</r25:state>', $pos1, $pos2 + 12 - $pos1);
+            $new_state = ($op == 'confirm') ? '2' : '99';
+          $xml_string = substr_replace($xml_string, '<r25:state>' . $new_state . '</r25:state>', $pos1, $pos2 + 12 - $pos1);
         }
       }
     }
@@ -809,7 +841,7 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
       $email_list = _stanford_r25_build_event_email_list($result, $secgroup_id, $additional);
       global $user;
       $body = array();
-      $body[] = 'A Room Reservation cancellation request was sent by ' . $user->name;
+      $body[] = 'A Room Reservation ' . $opout . ' request was sent by ' . $user->name;
       $body[] =' for "' . $title . '" in room ' . $rooms[$room_id]['display_name'];
       $startdate = DateTime::createFromFormat(DATE_W3C, $start);
       if ($event_count > 1) {
@@ -825,7 +857,7 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
       else {
         $body[] = ' for the reservation starting ' . $startdate->format("l, F j, Y g:i a");
       }
-      $subject = 'Room reservation cancellation';
+      $subject = 'Room reservation ' . $opout;
       $params = array(
         'body' => $body,
         'subject' => $subject
@@ -834,7 +866,8 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
     }
     drupal_goto('/r25/' . $room_id . '/calendar');
   }
-  $form = confirm_form($form, 'Cancel Reservation', 'r25/' . $room_id . '/calendar', NULL, 'Cancel Reservation', 'Go Back to Calendar', 'cancel_res');
+    $optext = ucfirst($op);
+  $form = confirm_form($form, $optext . ' Reservation', 'r25/' . $room_id . '/calendar', NULL, $optext . ' Reservation', 'Go Back to Calendar', 'cancel_res');
   return $form;
 }
 
