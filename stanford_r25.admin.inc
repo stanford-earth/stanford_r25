@@ -408,7 +408,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL)
     if (empty($config)) {
         $config = array('machine_name' => '', 'display_name' => '', 'caltype' => 2, 'spud_name' => '', 'space_id' => '',
             'email_list' => '', 'created' => format_date(time()), 'status' => 1, 'max_hours' => 2,
-            'default_view' => 'weekly', 'description_as_title' => 0, 'permalink' => 0,
+            'default_view' => 2, 'description_as_title' => 0, 'permalink' => 0,
             'honor_blackouts' => 0, 'approver_secgroup_name' => '', 'approver_secgroup_id' => 0,
             'authentication' => 1, 'multi_day' => 0, 'event_attributes' => '', 'contact_attr' => '',
             'postprocess_booking' => 0, 'auto_billing_code' => '', 'email_confirms_and_cancels' => 0,

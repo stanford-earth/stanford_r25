@@ -282,8 +282,10 @@ function se3_hartley_download($form, &$form_state) {
 }
 
 function se3_hartley_download_validate($form, &$form_state) {
+    $year = intval($form_state['values']['se3_hartley_download_year']);
+    $month = intval($form_state['values']['se3_hartley_download_month']);
     if (empty($form_state['values']['se3_hartley_download_year']) ||
-        empty($form_state['values']['se3_hartley_download_month']) ||
+        !isset($form_state['values']['se3_hartley_download_month']) ||
         intval($form_state['values']['se3_hartley_download_year']) < 2016 ||
         intval($form_state['values']['se3_hartley_download_month']) < 0 ||
         intval($form_state['values']['se3_hartley_download_month']) > 11) {
@@ -312,8 +314,9 @@ function se3_hartley_download_submit($form, &$form_state) {
     $year = intval($form_state['values']['se3_hartley_download_year']);
     $month = intval($form_state['values']['se3_hartley_download_month']) + 1;
     $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-    $start = strval($year) . strval($month) . '01';
-    $end = strval($year). strval($month) . strval($days);
+    $month_str = ($month < 10) ? '0'.strval($month) : strval($month);
+    $start = strval($year) . $month_str . '01';
+    $end = strval($year). $month_str . strval($days);
     $output = array();
 
     foreach (array('1675','1860','1861') as $space_id) {
@@ -323,9 +326,14 @@ function se3_hartley_download_submit($form, &$form_state) {
         if ($result && !empty($result['index']['R25:RESERVATION_ID']) &&
             is_array($result['index']['R25:RESERVATION_ID'])) {
             foreach ($result['index']['R25:RESERVATION_ID'] as $key => $value) {
+                $startdate = DateTime::createFromFormat(DATE_W3C,
+                    _se3_hartley_get_value($result, $key, 'R25:RESERVATION_START_DT'));
+                $enddate = DateTime::createFromFormat(DATE_W3C,
+                    _se3_hartley_get_value($result, $key, 'R25:RESERVATION_END_DT'));
                 $space_output[] = array(
-                    'start' => _se3_hartley_get_value($result, $key, 'R25:RESERVATION_START_DT'),
-                    'end' => _se3_hartley_get_value($result, $key, 'R25:RESERVATION_END_DT'),
+                    'timestamp' => $startdate->getTimestamp(),
+                    'start' => $startdate->format("l, F j, Y g:i a"),
+                    'end' => $enddate->format("l, F j, Y g:i a"),
                     'space' => _se3_hartley_get_value($result, $key, 'R25:SPACE_NAME'),
                     'event' => _se3_hartley_get_value($result, $key, 'R25:EVENT_NAME'),
                     'count' => _se3_hartley_get_value($result, $key, 'R25:EXPECTED_COUNT'),
@@ -414,6 +422,7 @@ function se3_hartley_download_submit($form, &$form_state) {
     if (empty($output)) {
         drupal_set_message('No reservations were found.','error');
     } else {
+        usort($output, '_se3_hartley_timestamp_sort');
         header('Content-Type: application/excel');
         header('Content-Disposition: attachment; filename="hartley_'.$year.'_'.$month.'.csv"');
         $mc_array = array('Event Name', 'Location','Start Date','End Date','Confirmed?','Contact',
@@ -432,4 +441,12 @@ function se3_hartley_download_submit($form, &$form_state) {
         exit;
         //drupal_set_message('Reservation download complete!');
     }
+}
+
+function _se3_hartley_timestamp_sort($a, $b) {
+    if (!is_array($a) || !is_array($b) || empty($a['timestamp']) || empty($b['timestamp']) ||
+        $a['timestamp'] === $b['timestamp']) {
+        return 0;
+    }
+    return ($a['timestamp'] < $b['timestamp']) ? -1 : 1;
 }
