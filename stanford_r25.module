@@ -8,6 +8,8 @@ define('STANFORD_R25_ROOM_STATUS_DISABLED', 0);
 define('STANFORD_R25_ROOM_STATUS_READONLY', 1);
 define('STANFORD_R25_ROOM_STATUS_TENTATIVE', 2);
 define('STANFORD_R25_ROOM_STATUS_CONFIRMED', 3);
+
+// define authentication methods as constants
 define('STANFORD_R25_AUTH_DRUPAL_ACCT', 1);
 define('STANFORD_R25_AUTH_EXTERN_ACCT', 2);
 define('STANFORD_R25_AUTH_EITHER_ACCT', 3);
@@ -15,179 +17,190 @@ define('STANFORD_R25_AUTH_EITHER_ACCT', 3);
 /**
  * Implements hook_menu().
  */
-function stanford_r25_menu()
-{
-    $items = array();
+function stanford_r25_menu() {
+  $items = array();
 
-    // first configuration form for credentials and r25 URLs
-    $items[STANFORD_R25_MENU_PATH] = array(
-        'title' => t('R25 Rooms'),
-        'type' => MENU_NORMAL_ITEM,
-        'description' => t('Manage R25 Room Configurations'),
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_credentials'),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-    );
-    // make the first configuration form a tab
-    $items[STANFORD_R25_MENU_PATH . '/credentials'] = array(
-        'title' => t('Credentials'),
-        'type' => MENU_DEFAULT_LOCAL_TASK,
-        'access arguments' => array('administer stanford r25'),
-        'weight' => -30,
-    );
-    // the next configuration form for account codes and messages goes in another tab
-    $items[STANFORD_R25_MENU_PATH . '/config'] = array(
-        'title' => 'Configuration',
-        'type' => MENU_LOCAL_TASK,
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_settings'),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-        'weight' => -20,
-    );
-    // the third tab lists all of our configured rooms
-    $items[STANFORD_R25_MENU_PATH . '/list'] = array(
-        'title' => 'List Rooms',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_room_list'),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-        'type' => MENU_LOCAL_TASK,
-        'weight' => -10,
-    );
-    // the add-a-room form appears on its own page
-    $items[STANFORD_R25_MENU_PATH . '/list/add'] = array(
-        'title' => 'Add Room Configuration',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_room_config', 5),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-        'type' => MENU_NORMAL_ITEM,
-    );
-    // the edit-a-room form is the same as the add form, but with the machine id of the room passed as a param
-    $items[STANFORD_R25_MENU_PATH . '/%/edit'] = array(
-        'title callback' => '_stanford_r25_room_title',
-        'title arguments' => array(4, 'Edit Room Configuration'),
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_room_config', 4),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-    );
-    // we need a delete-a-room confirmation page
-    $items[STANFORD_R25_MENU_PATH . '/%/delete'] = array(
-        'title' => 'Delete Room Configuration',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_room_delete', 4),
-        'access arguments' => array('administer stanford r25'),
-        'file' => 'stanford_r25.admin.inc',
-    );
-// this page, parameterized by the room machine id, displays the room calendar and info and reservation blocks
-    $items['r25/%/calendar'] = array(
-        'title callback' => '_stanford_r25_room_title',
-        'title arguments' => array(1, 'Room Calendar'),
-        'page callback' => '_stanford_r25_calendar_page',
-        'page arguments' => array(1),
-        'access arguments' => array('view r25 room calendars'),
-        'file' => 'stanford_r25.pages.inc',
-        'type' => MENU_CALLBACK,
-    );
-    // the url for the JSON feed to return to the JavaScript FullCalendar, parameterized by the room machine id
-    $items['r25/%/r25_feed'] = array(
-        'title' => 'R25 Feed',
-        'page callback' => '_stanford_r25_feed',
-        'page arguments' => array(1),
-        'access arguments' => array('view r25 room calendars'),
-        'type' => MENU_CALLBACK,
-        'file' => 'stanford_r25.feed.inc',
-    );
-    $items['r25/%/cancel_reservation/%/%'] = array(
-        'title' => 'Cancel Reservation',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4),
-        'access arguments' => array('book r25 rooms'),
-        'type' => MENU_CALLBACK,
-        'file' => 'stanford_r25.pages.inc',
-    );
-    $items['r25/%/confirm_reservation/%/%'] = array(
-        'title' => 'Confirm Reservation',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('_stanford_r25_cancel_reservation',1,3,4),
-        'access arguments' => array('book r25 rooms'),
-        'type' => MENU_CALLBACK,
-        'file' => 'stanford_r25.pages.inc',
-    );
-    $items['display_r25_room_config'] = array(
-        'page callback' => '_stanford_r25_list_rooms',
-        'access arguments' => array('administer stanford r25'),
-        'type' => MENU_CALLBACK,
-    );
-    return $items;
+  // first configuration form for credentials and r25 URLs
+  $items[STANFORD_R25_MENU_PATH] = array(
+    'title' => t('R25 Rooms'),
+    'type' => MENU_NORMAL_ITEM,
+    'description' => t('Manage R25 Room Configurations'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_credentials'),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+  );
+  // make the first configuration form a tab
+  $items[STANFORD_R25_MENU_PATH . '/credentials'] = array(
+    'title' => t('Credentials'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'access arguments' => array('administer stanford r25'),
+    'weight' => -30,
+  );
+  // the next configuration form for account codes and messages goes in another tab
+  $items[STANFORD_R25_MENU_PATH . '/config'] = array(
+    'title' => 'Configuration',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_settings'),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+    'weight' => -20,
+  );
+  // the third tab lists all of our configured rooms
+  $items[STANFORD_R25_MENU_PATH . '/list'] = array(
+    'title' => 'List Rooms',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_list'),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -10,
+  );
+  // the add-a-room form appears on its own page
+  $items[STANFORD_R25_MENU_PATH . '/list/add'] = array(
+    'title' => 'Add Room Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_config', 5),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  // the edit-a-room form is the same as the add form, but with the machine id of the room passed as a param
+  $items[STANFORD_R25_MENU_PATH . '/%/edit'] = array(
+    'title callback' => '_stanford_r25_room_title',
+    'title arguments' => array(4, 'Edit Room Configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_config', 4),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+  );
+  // we need a delete-a-room confirmation page
+  $items[STANFORD_R25_MENU_PATH . '/%/delete'] = array(
+    'title' => 'Delete Room Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_room_delete', 4),
+    'access arguments' => array('administer stanford r25'),
+    'file' => 'stanford_r25.admin.inc',
+  );
+  // this page, parameterized by the room machine id, displays the room calendar and info and reservation blocks
+  $items['r25/%/calendar'] = array(
+    'title callback' => '_stanford_r25_room_title',
+    'title arguments' => array(1, 'Room Calendar'),
+    'page callback' => '_stanford_r25_calendar_page',
+    'page arguments' => array(1),
+    'access arguments' => array('view r25 room calendars'),
+    'file' => 'stanford_r25.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+  // the url for the JSON feed to return to the JavaScript FullCalendar, parameterized by the room machine id
+  $items['r25/%/r25_feed'] = array(
+    'title' => 'R25 Feed',
+    'page callback' => '_stanford_r25_feed',
+    'page arguments' => array(1),
+    'access arguments' => array('view r25 room calendars'),
+    'type' => MENU_CALLBACK,
+    'file' => 'stanford_r25.feed.inc',
+  );
+  // links to cancel reservations displayed on fullcalendar
+  // parameters are room machine id, R25 event id, and instance date (needed for recurring events)
+  // access argument is simply if user can book rooms, but more sophisticated permission checking is done in the callback
+  $items['r25/%/cancel_reservation/%/%'] = array(
+    'title' => 'Cancel Reservation',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_cancel_reservation', 1, 3, 4),
+    'access arguments' => array('book r25 rooms'),
+    'type' => MENU_CALLBACK,
+    'file' => 'stanford_r25.pages.inc',
+  );
+  // links to confirm reservations displayed on fullcalendar
+  // parameters are room machine id, R25 event id, and instance date (for display only)
+  // access argument is simply if user can book rooms, but more sophisticated permission checking is done in the callback
+  // uses the same callback as cancel_reservation, which checks the drupal_path to see which is which
+  $items['r25/%/confirm_reservation/%/%'] = array(
+    'title' => 'Confirm Reservation',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_stanford_r25_cancel_reservation', 1, 3, 4),
+    'access arguments' => array('book r25 rooms'),
+    'type' => MENU_CALLBACK,
+    'file' => 'stanford_r25.pages.inc',
+  );
+  // url to a callback to display all room configurations as an array
+  $items['display_r25_room_config'] = array(
+    'page callback' => '_stanford_r25_list_rooms',
+    'access arguments' => array('administer stanford r25'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
 }
 
 /**
  * Implements hook_permission()
  */
-function stanford_r25_permission()
-{
-    return array(
-        // only users with this permission set can manage room configurations
-        'administer stanford r25' => array(
-            'title' => t('Administer Stanford R25 settings'),
-            'description' => 'Change Stanford R25 room settings.',
-        ),
-        // anyone with this permission can view a room page including the info block and calendar
-        'view r25 room calendars' => array(
-            'title' => t('View R25 Room Calendars'),
-            'description' => 'View R25 room calendars created by 25Live Publisher.',
-        ),
-        // anyone with this permission can use the room reservation form to book a room
-        'book r25 rooms' => array(
-            'title' => t('Book R25 Rooms'),
-            'description' => 'Book rooms in the R25 database from the 25Live Publisher calendar.',
-        ),
-    );
+function stanford_r25_permission() {
+  return array(
+    // only users with this permission set can manage room configurations
+    'administer stanford r25' => array(
+      'title' => t('Administer Stanford R25 settings'),
+      'description' => 'Change Stanford R25 room settings.',
+    ),
+    // anyone with this permission can view a room page including the info block and calendar
+    'view r25 room calendars' => array(
+      'title' => t('View R25 Room Calendars'),
+      'description' => 'View R25 room calendars created by 25Live Publisher.',
+    ),
+    // anyone with this permission can use the room reservation form to book a room
+    'book r25 rooms' => array(
+      'title' => t('Book R25 Rooms'),
+      'description' => 'Book rooms in the R25 database from the 25Live Publisher calendar.',
+    ),
+  );
 }
 
+// builds a URI for room photos pulled from 25Live using directory set in config pages
 function _stanford_r25_file_path($photo_id) {
-    return'public://'.variable_get('stanford_r25_room_image_directory','').'/R25_'.$photo_id.'.jpg';
+  return 'public://' . variable_get('stanford_r25_room_image_directory', '') . '/R25_' . $photo_id . '.jpg';
 }
 
 /**
  * Implements hook_block_info()
  */
-function stanford_r25_block_info()
-{
-    // define two blocks, both configured to initially appear only on room calendar pages
-    // reserve block, which contains room reservation form, is never cached
-    // info block, is cached per page, so each room's info block is in the block cache
-    $blocks = array();
-    $blocks['stanford_r25_reserve'] = array(
-        'info' => t('R25 Room Reservation Form'),
-        'cache' => DRUPAL_NO_CACHE,
-        'visibility' => BLOCK_VISIBILITY_LISTED,
-        'pages' => 'r25/*/calendar',
-    );
-    $blocks['stanford_r25_room_info'] = array(
-        'info' => t('R25 Room Information'),
-        'cache' => DRUPAL_CACHE_PER_PAGE,
-        'visibility' => BLOCK_VISIBILITY_LISTED,
-        'pages' => 'r25/*/calendar',
-    );
-    return $blocks;
+function stanford_r25_block_info() {
+  // define two blocks, both configured to initially appear only on room calendar pages.
+  // reserve block, which contains room reservation form, is never cached
+  // info block, is cached per page, so each room's info block is in the block cache
+  $blocks = array();
+  $blocks['stanford_r25_reserve'] = array(
+    'info' => t('R25 Room Reservation Form'),
+    'cache' => DRUPAL_NO_CACHE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => 'r25/*/calendar',
+  );
+  $blocks['stanford_r25_room_info'] = array(
+    'info' => t('R25 Room Information'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => 'r25/*/calendar',
+  );
+  return $blocks;
 }
 
+// function that checks if the current user can book a room, based on
+// room machine_id and how the room is authenticated
 function _stanford_r25_can_book($room_id) {
 
+  // default return array; user is an internal (Drupal) user
+  // who can not book the room
   $can_book = array(
     'can_book' => FALSE,
     'auth' => 'internal',
     'external_module' => '',
     'external_acct' => FALSE
   );
-  if (!empty($room_id)) {
-    $rooms = _stanford_r25_room_config_load();
-    if (!empty($rooms[$room_id]['authentication'])) {
+  if (!empty($room_id)) {  // only check if we have a room id, obviously
+    $rooms = _stanford_r25_room_config_load();   // load my room config array
+    if (!empty($rooms[$room_id]['authentication'])) {   // only continue if room has an auth type
+      // if the room uses internal Drupal accounts, simply check if the current user has the permission
       if (($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_DRUPAL_ACCT ||
           $rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EITHER_ACCT) &&
         user_access('book r25 rooms')
@@ -195,16 +208,19 @@ function _stanford_r25_can_book($room_id) {
         $can_book['can_book'] = TRUE;
       }
       else {
+        // if the user can't book by Drupal permission, and the room supports 
+        // external accounts, then check the user that way
         if ($rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EXTERN_ACCT ||
           $rooms[$room_id]['authentication'] == STANFORD_R25_AUTH_EITHER_ACCT
         ) {
           $can_book['auth'] = 'external';
+          // see if any module implements hook_stanford_r25_external_user
           $externs = module_implements('stanford_r25_external_user');
           if (!empty($externs) && is_array($externs)) {
             // if so, just use the first one returned
             $can_book['external_module'] = $externs[0];
             // call the stanford_r25_external_user hook for the module found
-            // it will return an array of user info if okay, or false if not
+            // it will return an array of user contact info if okay, or false if not
             $external_acct = module_invoke($externs[0], 'stanford_r25_external_user');
             if (!empty($external_acct)) {
               // we got back a non-empty array, so assume an authenticated user who can book the room
@@ -216,499 +232,602 @@ function _stanford_r25_can_book($room_id) {
       }
     }
   }
-  return $can_book;
+  return $can_book; // return the array defined above
 
 }
 
 /**
  * implements hook_block_view
  */
-function stanford_r25_block_view($delta = "")
-{
+function stanford_r25_block_view($delta = "") {
 
-    // creates the content of the two blocks defined above and returns a renderable array
-    $block = array();
+  // creates the content of the two blocks defined above and returns a renderable array
+  $block = array();
 
-    // get the room machine id from the current url and see if we can identify a status for it
-    $room_id = null;
-    $room_status = STANFORD_R25_ROOM_STATUS_DISABLED;
-    $rooms = _stanford_r25_room_config_load();
-    $url = explode("/", current_path());
-    if (count($url) > 2 && $url[count($url) - 3] === "r25" && $url[count($url) - 1] == "calendar") {
-        $room_id = $url[count($url) - 2];
-        if (!empty($rooms[$room_id]['status'])) {
-            $room_status = intval($rooms[$room_id]['status']);
-        }
+  // get the room machine id from the current url and see if we can identify a status for it
+  $room_id = NULL;
+  $room_status = STANFORD_R25_ROOM_STATUS_DISABLED;
+  $rooms = _stanford_r25_room_config_load();
+  $url = explode("/", current_path());
+  if (count($url) > 2 && $url[count($url) - 3] === "r25" && $url[count($url) - 1] == "calendar") {
+    $room_id = $url[count($url) - 2];
+    if (!empty($rooms[$room_id]['status'])) {
+      $room_status = intval($rooms[$room_id]['status']);
     }
+  }
 
-    // only return block output if we have a valid room_id
-    if ($delta == 'stanford_r25_reserve' && !empty($room_id)) {
+  // only return block output if we have a valid room_id
+  if ($delta == 'stanford_r25_reserve' && !empty($room_id)) {
 
-        // for the reserve form block, if the room is not reservable then return read-only message
-        if ($room_status == STANFORD_R25_ROOM_STATUS_READONLY) {
-            $readonly = variable_get('stanford_r25_readonly_msg', array('value' => '', 'format' => null));
-            if (!empty($readonly)) {
-                $block['subject'] = '';
-                $block['content'] = check_markup($readonly['value'],$readonly['format']);
-            }
-        } else if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
-            // check if the room is currently blacked out
-            if ($rooms[$room_id]['honor_blackouts'] == 1 &&  _stanford_r25_date_blacked_out(time())) {
-                $block['subject'] = '';
-                $block['content'] = 'This room is currently blacked out for reservations. Please contact your ' .
-                    'department administration for more information.';
-            } else {
-                // see if the current user has access to book room
-                $can_book = _stanford_r25_can_book($room_id);
-                // if the room is reservable and the user has permission to book, create the reserve form
-                // with its max capacity. If we don't know its max capacity, set it to 5
-                if ($can_book['can_book']) {
-                    $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
-                    $external_display = '';
-                    if ($can_book['auth'] == 'external' && !empty($can_book['external_acct'])) {
-                      $external_display = module_invoke($can_book['external_module'],
-                        'stanford_r25_external_user_display', $can_book['external_acct']);
-                    } else if ($can_book['auth'] == 'internal') {
-                      global $user;
-                      $external_display = $user->name . "\r\n" . $user->mail . "\r\n";
-                    }
-                    $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display, $can_book['external_acct']);
-                    $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
-                    $block['content'] = drupal_render($form);
-                // otherwise, if this room authenticates externally, get the auth link from the external auth module
-                } else if (!empty($rooms[$room_id]['authentication']) && 
-                    $rooms[$room_id]['authentication'] > STANFORD_R25_AUTH_DRUPAL_ACCT) {
-                    // present the user with an authentication link to access the room reservation form
-                    // but if no module implementing the hook was found we need to put up a message
-                    if (empty($can_book['external_module'])) {
-                        $block['subject'] = '';
-                        $block['content'] = 'This room requires external authentication, but no login link was found.';
-                    } else {
-                        $block['subject'] = '';
-                        $login_msg = variable_get('stanford_r25_ext_login_msg', 'Authenticate');
-                        $block['content'] = module_invoke($can_book['external_module'], 'stanford_r25_external_link', $login_msg);
-                    }
-                // otherwise, access to reserve room is based on Drupal permissions so offer a login link if
-                // user is anonymous, or a 'no access' message if user is logged in
-                } else {
-                    // if the user has no reservation permission and is logged in, then print a "no access" message
-                    // otherwise the user is anonymous so display the login link,
-                    if (user_is_logged_in()) {
-                        $no_access = variable_get('stanford_r25_notpermitted_msg', array('value' => '', 'format' => null));
-                        if (!empty($no_access)) {
-                            $block['subject'] = '';
-                            $block['content'] = check_markup($no_access['value'], $no_access['format']);
-                        }
-                    } else {
-                        $login_msg = variable_get('stanford_r25_login_msg', '');
-                        $login_uri = variable_get('stanford_r25_login_uri', '');
-                        if (!empty($login_msg) && !empty($login_uri)) {
-                            $block['subject'] = '';
-                            $block['content'] = l($login_msg, $login_uri, array('query' => array('destination' => current_path() . '#stanford-r25-reservation'),
-                                'attributes' => array('class' => array('btn', 'btn-giving'))));
-                        }
-                    }
-                }
-            }
-        }
-    } else if ($delta == 'stanford_r25_room_info' && !empty($room_id)) {
-
-        $content = '<div id="stanford-r25-room-info">';
-
-        if (empty($rooms[$room_id]['location_info'])) {
-            $content .= 'Room information unavailable. Please check with your site administrator.';
-        } else if ($room_status != STANFORD_R25_ROOM_STATUS_DISABLED) {
-            $room_info = $rooms[$room_id]['location_info'];
-            if (!empty($room_info['photo_id'])) {
-                $content .= '<div id="stanford-r25-room-photo"><img src="' . file_create_url(_stanford_r25_file_path($room_info['photo_id'])) . '"></div>';
-            }
-            $content .= '<div id="stanford-r25-room-detail">';
-            if (!empty($room_info['comments'])) {
-                $content .= '<div id="stanford-r25-room-comments">' . $room_info['comments'] . '</div>';
-            }
-            if (!empty($room_info['layout_name'])) {
-                $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
-            }
-            if (!empty($room_info['capacity'])) {
-                $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['capacity'] . '</div>';
-            }
-            if (!empty($room_info['layout_features'])) {
-                $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features'] . '</div>';
-            }
-/*
-            if (!empty($room_info['layout_categories'])) {
-                $content .= '<div id="stanford-r25-room-categories"><b>Categories:</b> ' . $room_info['layout_categories'] . '</div>';
-            }
-*/
-            if (!empty($room_info['layout_instruction'])) {
-                $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> ' . $room_info['layout_instruction'] . '</div>';
-            }
-            $content .= '</div>';
-        }
-        $content .= '</div>';
-        $readonly = variable_get('stanford_r25_readonly_msg', array('value' => '', 'format' => null));
+    // for the reserve form block, if the room is not reservable then return read-only message
+    if ($room_status == STANFORD_R25_ROOM_STATUS_READONLY) {
+      $readonly = variable_get('stanford_r25_readonly_msg', array(
+        'value' => '',
+        'format' => NULL
+      ));
+      if (!empty($readonly)) {
         $block['subject'] = '';
-        $block['content'] = check_markup($content,$readonly['format']);
+        $block['content'] = check_markup($readonly['value'], $readonly['format']);
+      }
     }
-    return $block;
+    else {
+      // the room is available for tentative or confirmed bookings
+      if ($room_status > STANFORD_R25_ROOM_STATUS_READONLY) {
+        // check if the room is currently blacked out
+        if ($rooms[$room_id]['honor_blackouts'] == 1 && _stanford_r25_date_blacked_out(time())) {
+          $block['subject'] = '';
+          $block['content'] = 'This room is currently blacked out for reservations. Please contact your ' .
+            'department administration for more information.';
+        }
+        else {
+          // see if the current user has access to book room
+          $can_book = _stanford_r25_can_book($room_id);
+          // if the room is reservable and the user has permission to book, create the reserve form
+          // with its max capacity. If we don't know its max capacity, set it to 5
+          if ($can_book['can_book']) {
+            $capacity = (empty($rooms[$room_id]['location_info']['capacity'])) ? 5 : $rooms[$room_id]['location_info']['capacity'];
+
+            // get user contact information. If external authentication is used, call hook_stanford_r25_external_user_display
+            // otherwise just use name and email from user Drupal account
+            $external_display = '';
+            if ($can_book['auth'] == 'external' && !empty($can_book['external_acct'])) {
+              $external_display = module_invoke($can_book['external_module'],
+                'stanford_r25_external_user_display', $can_book['external_acct']);
+            }
+            else {
+              if ($can_book['auth'] == 'internal') {
+                global $user;
+                $external_display = $user->name . "\r\n" . $user->mail . "\r\n";
+              }
+            }
+
+            // get the reservation form and render it into the block
+            $form = drupal_get_form("stanford_r25_reservation", $room_id, $capacity, $external_display, $can_book['external_acct']);
+            $block['subject'] = t("Reserve") . " " . $rooms[$room_id]['display_name'];
+            $block['content'] = drupal_render($form);
+            // otherwise, if this room authenticates externally, get the auth link from the external auth module
+          }
+          else {
+            // the room is not reservable. whatever shall we do?
+
+            // if the room can be authenticated externally, display a login link if we can
+            if (!empty($rooms[$room_id]['authentication']) &&
+              $rooms[$room_id]['authentication'] > STANFORD_R25_AUTH_DRUPAL_ACCT
+            ) {
+              // present the user with an authentication link to access the room reservation form
+              // but if no module implementing the hook was found we need to put up a message
+              if (empty($can_book['external_module'])) {
+                $block['subject'] = '';
+                $block['content'] = 'This room requires external authentication, but no login link was found.';
+              }
+              else {
+                $block['subject'] = '';
+                $login_msg = variable_get('stanford_r25_ext_login_msg', 'Authenticate');
+                $block['content'] = module_invoke($can_book['external_module'], 'stanford_r25_external_link', $login_msg);
+              }
+            }
+            else {
+              // otherwise, access to reserve room is based on Drupal permissions so offer a login link if
+              // user is anonymous, or a 'no access' message if user is logged in
+
+              // if the user has no reservation permission and is logged in, then print a "no access" message
+              // otherwise the user is anonymous so display the login link,
+              if (user_is_logged_in()) {
+                $no_access = variable_get('stanford_r25_notpermitted_msg', array(
+                  'value' => '',
+                  'format' => NULL
+                ));
+                if (!empty($no_access)) {
+                  $block['subject'] = '';
+                  $block['content'] = check_markup($no_access['value'], $no_access['format']);
+                }
+              }
+              else {
+                $login_msg = variable_get('stanford_r25_login_msg', '');
+                $login_uri = variable_get('stanford_r25_login_uri', '');
+                if (!empty($login_msg) && !empty($login_uri)) {
+                  $block['subject'] = '';
+                  // the login link uses a button CSS class that you may define in a css file.
+                  $block['content'] = l($login_msg, $login_uri, array(
+                    'query' => array('destination' => current_path() . '#stanford-r25-reservation'),
+                    'attributes' => array('class' => array('btn', 'btn-login'))
+                  ));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else {
+
+    // for the room info block, check that we have a room machine id
+    if ($delta == 'stanford_r25_room_info' && !empty($room_id)) {
+
+      $content = '<div id="stanford-r25-room-info">';
+
+      // room location info is pulled from 25Live and stored when the room is saved in its
+      // configuration page. If the information isn't available, display an error message.
+      if (empty($rooms[$room_id]['location_info'])) {
+        $content .= 'Room information unavailable. Please check with your site administrator.';
+      }
+      else {
+        // if we have room information, and the room hasn't been disabled, format the room picture and
+        // information into the block output.
+        if ($room_status != STANFORD_R25_ROOM_STATUS_DISABLED) {
+          $room_info = $rooms[$room_id]['location_info'];
+          if (!empty($room_info['photo_id'])) {
+            $content .= '<div id="stanford-r25-room-photo"><img src="' . file_create_url(_stanford_r25_file_path($room_info['photo_id'])) . '"></div>';
+          }
+          $content .= '<div id="stanford-r25-room-detail">';
+          if (!empty($room_info['comments'])) {
+            $content .= '<div id="stanford-r25-room-comments">' . $room_info['comments'] . '</div>';
+          }
+          if (!empty($room_info['layout_name'])) {
+            $content .= '<div id="stanford-r25-room-layout"><b>Layout:</b> ' . $room_info['layout_name'] . '</div>';
+          }
+          if (!empty($room_info['capacity'])) {
+            $content .= '<div id="stanford-r25-room-capacity"><b>Capacity:</b> ' . $room_info['capacity'] . '</div>';
+          }
+          if (!empty($room_info['layout_features'])) {
+            $content .= '<div id="stanford-r25-room-features"><b>Features:</b> ' . $room_info['layout_features'] . '</div>';
+          }
+          if (!empty($room_info['layout_instruction'])) {
+            $content .= '<div id="stanford-r25-room-instruction"><b>Instructions:</b> ' . $room_info['layout_instruction'] . '</div>';
+          }
+          $content .= '</div>';
+        }
+      }
+      $content .= '</div>';
+
+      // format the room info block using whatever text format is used for the page's readonly message.
+      $readonly = variable_get('stanford_r25_readonly_msg', array(
+        'value' => '',
+        'format' => NULL
+      ));
+      $block['subject'] = '';
+      $block['content'] = check_markup($content, $readonly['format']);
+    }
+  }
+  return $block;
 }
 
 // we store the room configuration information in an array in the variables table.
 // this function returns that array
-function _stanford_r25_room_config_load()
-{
-    return variable_get('stanford_r25_rooms', array());
+function _stanford_r25_room_config_load() {
+  return variable_get('stanford_r25_rooms', array());
 }
 
 // function to return true if a room configuration exists
-function _stanford_r25_room_config_exists($config)
-{
-    $rooms = _stanford_r25_room_config_load();
-    return isset($rooms[$config]);
+function _stanford_r25_room_config_exists($config) {
+  $rooms = _stanford_r25_room_config_load();
+  return isset($rooms[$config]);
 }
 
 // save room configuration data back into the array in the variables table
-function _stanford_r25_room_config_save($fields)
-{
-    if (!empty($fields['machine_name'])) {
-        $rooms = _stanford_r25_room_config_load();
-        $machine_name = $fields['machine_name'];
-        foreach ($fields as $key => $value) {
-            $rooms[$machine_name][$key] = $value;
-        }
-        variable_set('stanford_r25_rooms', $rooms);
+function _stanford_r25_room_config_save($fields) {
+  if (!empty($fields['machine_name'])) {
+    $rooms = _stanford_r25_room_config_load();
+    $machine_name = $fields['machine_name'];
+    foreach ($fields as $key => $value) {
+      $rooms[$machine_name][$key] = $value;
     }
+    variable_set('stanford_r25_rooms', $rooms);
+  }
 }
 
 // remove a room configuration from the room array
-function _stanford_r25_room_config_delete_room($name)
-{
-    $rooms = _stanford_r25_room_config_load();
-    if (array_key_exists($name, $rooms)) {
-        unset($rooms[$name]);
-        variable_set('stanford_r25_rooms', $rooms);
-    }
+function _stanford_r25_room_config_delete_room($name) {
+  $rooms = _stanford_r25_room_config_load();
+  if (array_key_exists($name, $rooms)) {
+    unset($rooms[$name]);
+    variable_set('stanford_r25_rooms', $rooms);
+  }
 }
 
 // return a room's display name as the page title for its configuration page
-function _stanford_r25_room_title($config = null, $default_title = '')
-{
-    $rooms = _stanford_r25_room_config_load();
-    $room = $default_title;
-    if (!empty($config) && isset($rooms[$config]['display_name'])) {
-        $room = $rooms[$config]['display_name'];
-    }
-    return $room;
+function _stanford_r25_room_title($config = NULL, $default_title = '') {
+  $rooms = _stanford_r25_room_config_load();
+  $room = $default_title;
+  if (!empty($config) && isset($rooms[$config]['display_name'])) {
+    $room = $rooms[$config]['display_name'];
+  }
+  return $room;
 }
 
 // return a link to the add room page if the list of rooms is empty
-function stanford_r25_menu_local_tasks_alter(&$data, $router_item, $root_path)
-{
-    switch ($root_path) {
-        case STANFORD_R25_MENU_PATH . '/list':
-            $item = menu_get_item(STANFORD_R25_MENU_PATH . '/list/add');
-            if ($item['access']) {
-                $data['actions']['output'][] = array(
-                    '#theme' => 'menu_local_action',
-                    '#link' => $item,
-                );
-            }
-            break;
-    }
+function stanford_r25_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  switch ($root_path) {
+    case STANFORD_R25_MENU_PATH . '/list':
+      $item = menu_get_item(STANFORD_R25_MENU_PATH . '/list/add');
+      if ($item['access']) {
+        $data['actions']['output'][] = array(
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        );
+      }
+      break;
+  }
 }
 
 // makes calls to 25Live webservices API
-function _stanford_r25_api_call($command = null, $url = null, $credential = null, $post_data = null, $id = null)
-{
-    // we need 25Live admin credentials either from the variables table or passed in by URL
-    if (!isset($credential)) {
-        $credential = decrypt(variable_get('stanford_r25_credential', ''));
-    }
-    // get the base url for the organization's 25Live back-end
-    if (!isset($url)) {
-        $url = variable_get('stanford_r25_base_url', '');
-    }
-    if (empty($url)) return false;
-    // add the 25Live admin credential to the url and force it to https
-    $url = 'https://' . $credential . '@' . substr($url, (strpos($url, '://') + 3));
-    // figure out which 25Live webservices API command corresponds to what we want to do
-    switch ($command) {
-        case 'reserve':
-            $xml_command = 'events.xml';
-            break;
-        case 'roominfo':
-            $xml_command = 'space.xml?space_id=' . $post_data;
-            break;
-        case 'roomphoto':
-            $xml_command = 'image?image_id=' . $post_data;
-            break;
-        case 'feed':
-            //$xml_command = 'reservations.xml?' . $post_data;
-            $xml_command = 'rm_reservations.xml?include=related&' . $post_data;
-            break;
-        case 'delete':
-            $xml_command = 'event.xml?event_id=' . $post_data;
-            break;
-        case 'acctinfo':
-            $xml_command = 'contact.xml?current=T';
-            break;
-        case 'secgroup':
-            $xml_command = 'secgroups.xml?group_name=' . $post_data;
-            break;
-        case 'r25users':
-            $xml_command = 'r25users.xml?security_group_id=' . $post_data;
-            break;
-        case 'evatrb':
-            $xml_command = 'evatrb.xml?attribute_id=' . $post_data;
-            break;
-        case 'event-get':
-            //$xml_command = 'event.xml?event_id=' . $post_data . '&include=attendees+customers+reservations+text+categories+attributes+workflow+workflow_history+requirements+relationships';
-            $xml_command = 'event.xml?event_id=' . $post_data;
-            break;
-        case 'event-put':
-            $xml_command = 'event.xml?event_id=' . $id;
-            break;
-        case 'billing-get':
-            $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing+history';
-            break;
-        case 'billing-put':
-            $xml_command = 'event.xml?event_id=' . $id . '&include=billing+history';
-            break;
-        case 'download':
-            $xml_command = 'rm_reservations.xml?' . $post_data . '&include=pending+text+attributes';
-            break;
-        default:
-            $xml_command = 'null.xml';
-    }
-    // add the webservices command to the url
-    $url = rtrim($url, '/') . '/' . $xml_command;
+function _stanford_r25_api_call($command = NULL, $url = NULL, $credential = NULL, $post_data = NULL, $id = NULL) {
+  // we need 25Live admin credentials either from the variables table or passed in by URL
+  // See the collegenet API documentation for more information: http://knowledge25.collegenet.com/display/WSW/API
+  if (!isset($credential)) {
+    $credential = decrypt(variable_get('stanford_r25_credential', ''));
+  }
+  // get the base url for the organization's 25Live back-end
+  if (!isset($url)) {
+    $url = variable_get('stanford_r25_base_url', '');
+  }
+  if (empty($url)) {
+    return FALSE;
+  }
+  // add the 25Live admin credential to the url and force it to https
+  $url = 'https://' . $credential . '@' . substr($url, (strpos($url, '://') + 3));
+  // figure out which 25Live webservices API command corresponds to what we want to do
+  switch ($command) {
+    case 'reserve':
+      $xml_command = 'events.xml';
+      break;
+    case 'roominfo':
+      $xml_command = 'space.xml?space_id=' . $post_data;
+      break;
+    case 'roomphoto':
+      $xml_command = 'image?image_id=' . $post_data;
+      break;
+    case 'feed':
+      $xml_command = 'rm_reservations.xml?include=related&' . $post_data;
+      break;
+    case 'delete':
+      $xml_command = 'event.xml?event_id=' . $post_data;
+      break;
+    case 'acctinfo':
+      $xml_command = 'contact.xml?current=T';
+      break;
+    case 'secgroup':
+      $xml_command = 'secgroups.xml?group_name=' . $post_data;
+      break;
+    case 'r25users':
+      $xml_command = 'r25users.xml?security_group_id=' . $post_data;
+      break;
+    case 'evatrb':
+      $xml_command = 'evatrb.xml?attribute_id=' . $post_data;
+      break;
+    case 'event-get':
+      $xml_command = 'event.xml?event_id=' . $post_data;
+      break;
+    case 'event-put':
+      $xml_command = 'event.xml?event_id=' . $id;
+      break;
+    case 'billing-get':
+      $xml_command = 'event.xml?event_id=' . $post_data . '&include=billing+history';
+      break;
+    case 'billing-put':
+      $xml_command = 'event.xml?event_id=' . $id . '&include=billing+history';
+      break;
+    case 'download':
+      $xml_command = 'rm_reservations.xml?' . $post_data . '&include=pending+text+attributes';
+      break;
+    default:
+      $xml_command = 'null.xml';
+  }
+  // add the webservices command to the url
+  $url = rtrim($url, '/') . '/' . $xml_command;
 
-    // depending on what we're doing, the HTTP method will be GET, POST, or DELETE
-    $method = 'GET';
-    $options = array();
-    if ($command == 'reserve') {
-        // $post_data contains the XML for a reservation request
-        $method = 'POST';
-        $options['data'] = $post_data;
-    } else if ($command == 'billing-put' || $command == 'event-put') {
-        $method = 'PUT';
-        $options['data'] = $post_data;
-    } else if ($command == 'delete') {
+  // depending on what we're doing, the HTTP method will be GET, POST, or DELETE
+  $method = 'GET';
+  $options = array();
+  if ($command == 'reserve') {
+    // $post_data contains the XML for a reservation request
+    $method = 'POST';
+    $options['data'] = $post_data;
+  }
+  else {
+    // $post_data contains the XML to update an event or its billing group id
+    if ($command == 'billing-put' || $command == 'event-put') {
+      $method = 'PUT';
+      $options['data'] = $post_data;
+    }
+    else {
+      if ($command == 'delete') {
         $method = 'DELETE';
+      }
     }
-    // use drupal_http_request to make the request
-    $options['method'] = $method;
-    $options['headers'] = array('Content-Type' => 'text/xml; charset=UTF-8');
-    $output = drupal_http_request($url, $options);
-    $result = false;
+  }
+  // use drupal_http_request to make the request
+  $options['method'] = $method;
+  $options['headers'] = array('Content-Type' => 'text/xml; charset=UTF-8');
+  $output = drupal_http_request($url, $options);
+  $result = FALSE;
 
-    // if the http request returns an error, report it
-    // otherwise parse the returned XML and pass it back to whoever requested this call
-    if (!empty($output->error)) {
-        // if $output is false, report an http error
-        $http_error = 'HTTP Request Error: ' . $output->error;
-        watchdog('stanford_r25', $http_error);
-    } else if ($command == 'roomphoto') {
-        $result = $output->data;
-    } else {
-        // if we have output, parse it and create an array to return
-        $p = xml_parser_create();
-        $vals = array();
-        $index = array();
-        xml_parse_into_struct($p, $output->data, $vals, $index);
-        xml_parser_free($p);
-        if ($xml_command == 'null.xml' && !empty($vals[0]['tag']) && $vals[0]['tag'] === 'R25:NULL') {
-            $result = true;
-        } else {
-            $result = array('vals' => $vals, 'index' => $index);
-        }
-        if ($command == 'event-get' || $command == 'billing-get') {
-            $result['raw-xml'] = $output->data;
-        }
+  // if the http request returns an error, report it
+  // otherwise parse the returned XML into index and value arrays and pass it
+  // back to whoever requested this call
+  if (!empty($output->error)) {
+    // if $output is false, report an http error
+    $http_error = 'HTTP Request Error: ' . $output->error;
+    watchdog('stanford_r25', $http_error);
+  }
+  else {
+    if ($command == 'roomphoto') {
+      // if getting a room photo, $output->data will contain JPEG data instead of XML
+      $result = $output->data;
     }
-    return $result;
+    else {
+      // if we have output, parse it and create an array to return
+      $p = xml_parser_create();
+      $vals = array();
+      $index = array();
+      xml_parse_into_struct($p, $output->data, $vals, $index);
+      xml_parser_free($p);
+      // for the null command, we just want a non-error response
+      if ($xml_command == 'null.xml' && !empty($vals[0]['tag']) && $vals[0]['tag'] === 'R25:NULL') {
+        $result = TRUE;
+      }
+      else {
+        // for all other commands, return the XML parsed into arrays
+        $result = array('vals' => $vals, 'index' => $index);
+      }
+      // and if running commands event-get or billing-get, also
+      // return the raw XML to be modified.
+      if ($command == 'event-get' || $command == 'billing-get') {
+        $result['raw-xml'] = $output->data;
+      }
+    }
+  }
+  return $result;
 }
 
 /**
  * Implementation of hook_mail for emailing reservations to staff
  */
-function stanford_r25_mail($key, &$message, $params)
-{
-    $message['subject'] = $params['subject'];
-    $message['body'] = $params['body'];
+function stanford_r25_mail($key, &$message, $params) {
+  $message['subject'] = $params['subject'];
+  $message['body'] = $params['body'];
 }
 
+// function to parse the contents of a blackout date text area into an
+// array of start and end blackout dates
 function _stanford_r25_parse_blackout_dates($inStr) {
-    $blackouts = array();
-    $blackout_text = trim($inStr);
-    if (!empty($blackout_text)) {
-        $tmp1 = explode("\n", $blackout_text);
-        foreach ($tmp1 as $tmp2) {
-            $blackout = trim($tmp2);
-            if (preg_match('(\d{4}-\d{2}-\d{2} - \d{4}-\d{2}-\d{2})',$blackout) === 1) {
-                $tmp3 = explode(" - ",$blackout);
-                $blackouts[] = array('start'=>$tmp3[0],'end'=>$tmp3[1]);
-            }
-        }
+  $blackouts = array();
+  $blackout_text = trim($inStr);
+  if (!empty($blackout_text)) {
+    $tmp1 = explode("\n", $blackout_text);
+    foreach ($tmp1 as $tmp2) {
+      $blackout = trim($tmp2);
+      if (preg_match('(\d{4}-\d{2}-\d{2} - \d{4}-\d{2}-\d{2})', $blackout) === 1) {
+        $tmp3 = explode(" - ", $blackout);
+        $blackouts[] = array('start' => $tmp3[0], 'end' => $tmp3[1]);
+      }
     }
-    return $blackouts;
+  }
+  return $blackouts;
 }
 
+// function to check if a given date is blacked out based on blackout dates
+// and current date.
+// $date is given as a UNIX timestamp
 function _stanford_r25_date_blacked_out($date) {
 
-    // if an empty date is given, return false
-    if (empty($date)) return false;
-    
-    // if I'm currently in a blackout period, the requested date doesn't matter - we consider it blacked out.
-    // if I'm *not* currently in a blackout period, then the requested date has to be before the next blackout starts.
-    // if I'm currently past the last possible blackout, consider me blacked out so an admin will update the dates.
-    $blackouts = _stanford_r25_parse_blackout_dates(variable_get('stanford_r25_blackout_dates',''));
-    $blacked_out = true;
-    
-    // first find out if we are currently in a blackout
-    // if not, find out when the next blackout starts
-    $cur = time();
-    $cur_blackout = true;
-    $next_blackout = 0;
-    foreach ($blackouts as $blackout) {
-        if ($cur < strtotime($blackout['start'])) {
-            $cur_blackout = false;
-            $next_blackout = strtotime($blackout['start']);
-            break;
-        } else if ($cur <= strtotime($blackout['end'])) {
-            break;
-        }
+  // if an empty date is given, return false
+  if (empty($date)) {
+    return FALSE;
+  }
+
+  // if I'm currently in a blackout period, the requested date doesn't matter - we consider it blacked out.
+  // if I'm *not* currently in a blackout period, then the requested date has to be before the next blackout starts.
+  // if I'm currently past the last possible blackout, consider me blacked out so an admin will update the dates.
+  $blackouts = _stanford_r25_parse_blackout_dates(variable_get('stanford_r25_blackout_dates', ''));
+  $blacked_out = TRUE;
+
+  // first find out if we are currently in a blackout
+  // if not, find out when the next blackout starts
+  $cur = time();
+  $cur_blackout = TRUE;
+  $next_blackout = 0;
+  foreach ($blackouts as $blackout) {
+    if ($cur < strtotime($blackout['start'])) {
+      $cur_blackout = FALSE;
+      $next_blackout = strtotime($blackout['start']);
+      break;
     }
-    
-    // now see if the requested date is before the next blackout
-    if (!$cur_blackout && $date < $next_blackout) {
-        $blacked_out = false;
+    else {
+      if ($cur <= strtotime($blackout['end'])) {
+        break;
+      }
     }
-    return $blacked_out;
+  }
+
+  // now see if the requested date is before the next blackout
+  if (!$cur_blackout && $date < $next_blackout) {
+    $blacked_out = FALSE;
+  }
+  return $blacked_out;
 }
 
+// this is a simple function to output room configurations for dev purposes.
 function _stanford_r25_list_rooms() {
+  $rooms = _stanford_r25_room_config_load();
+  $room_output = print_r($rooms, TRUE);
+  $output = 'rooms: <pre>' . $room_output . '</pre>';
+  return $output;
+}
+
+// check if the current user can confirm or cancel a reservation
+function _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, $op) {
+  // first get the event's XML from 25Live
+  $result = _stanford_r25_api_call('event-get', NULL, NULL, $event_id);
+  if ($result) {
+    // make sure the event is for the requested room so nobody pulls a fast one.
     $rooms = _stanford_r25_room_config_load();
-    $room_output = print_r($rooms,TRUE);
-    $output = 'rooms: <pre>'.$room_output.'</pre>';
-    return $output;
-}
+    if (empty($result['index']['R25:SPACE_ID']) || !is_array($result['index']['R25:SPACE_ID']) ||
+      $result['vals'][$result['index']['R25:SPACE_ID'][0]]['value'] != $rooms[$room_id]['space_id']
+    ) {
+      drupal_set_message('Room mismatch for confirm or cancel event.', 'error', FALSE);
+      return FALSE;
+    }
 
-function _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, $op)
-{
-    $result = _stanford_r25_api_call('event-get', null, null, $event_id);
-    if ($result) {
-        $rooms = _stanford_r25_room_config_load();
-        if (empty($result['index']['R25:SPACE_ID']) || !is_array($result['index']['R25:SPACE_ID']) ||
-            $result['vals'][$result['index']['R25:SPACE_ID'][0]]['value'] != $rooms[$room_id]['space_id']) {
-            drupal_set_message('Room mismatch for confirm or cancel event.','error',false);
-            return false;
+    // default is that user can't do operation (confirm or cancel)
+    $can_cancel = FALSE;
+    global $user;
+
+    // if the user is user1 or has administer rights in Drupal, let them do operation
+    if ($user->uid == 1 || user_access('administer stanford r25')) {
+      $can_cancel = TRUE;
+    }
+    else {
+      // allow users to cancel events they created, either through this module or directly in 25Live
+      if (!empty($user->mail) && $op === 'cancel') {
+        // see if requestor email matches or is quickbook. If quickbook, we must check the user's email differently
+
+        $quickbook_id = intval(variable_get('stanford_r25_credential_contact_id', '0')); // get the R25 user id for the "quickbook" user
+
+        // get the R25 user id and email address for the user that scheduled the event.
+        $scheduler_id = 0;
+        $scheduler_email = '';
+        if (!empty($result['index']['R25:ROLE_NAME']) && is_array($result['index']['R25:ROLE_NAME'])) {
+          foreach ($result['index']['R25:ROLE_NAME'] as $key => $value) {
+            if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Scheduler') {
+              if (!empty($result['index']['R25:CONTACT_ID'][$key]) &&
+                !empty($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value'])
+              ) {
+                $scheduler_id = intval($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value']);
+                if (!empty($result['index']['R25:EMAIL'][$key]) &&
+                  !empty($result['vals'][$result['index']['R25:EMAIL'][$key]]['value'])
+                ) {
+                  $scheduler_email = $result['vals'][$result['index']['R25:EMAIL'][$key]]['value'];
+                }
+              }
+              break;
+            }
+          }
         }
-        $can_cancel = false;
-        global $user;
-        if ($user->uid == 1 || user_access('administer stanford r25')) {
-            $can_cancel = true;
-        } else if (!empty($user->mail) && $op === 'cancel') {
-            // see if requestor email matches or is quickbook
-            $quickbook_id = intval(variable_get('stanford_r25_credential_contact_id','0'));
-            $scheduler_id = 0;
+
+        if ($scheduler_id > 0) {
+          // if the reservation was made with quickbook, we need to pull the requestor's email address out of the event description
+          if ($quickbook_id == $scheduler_id) {
             $scheduler_email = '';
-            if (!empty($result['index']['R25:ROLE_NAME']) && is_array($result['index']['R25:ROLE_NAME'])) {
-                foreach ($result['index']['R25:ROLE_NAME'] as $key => $value) {
-                    if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Scheduler') {
-                        if (!empty($result['index']['R25:CONTACT_ID'][$key]) && 
-                            !empty($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value']))
-                        {
-                            $scheduler_id = intval($result['vals'][$result['index']['R25:CONTACT_ID'][$key]]['value']);
-                            if (!empty($result['index']['R25:EMAIL'][$key]) &&
-                                !empty($result['vals'][$result['index']['R25:EMAIL'][$key]]['value']))
-                            {
-                                $scheduler_email = $result['vals'][$result['index']['R25:EMAIL'][$key]]['value'];
-                            }
-                        }
-                        break;
+            if (!empty($result['index']['R25:TEXT_TYPE_NAME']) && is_array($result['index']['R25:TEXT_TYPE_NAME'])) {
+              foreach ($result['index']['R25:TEXT_TYPE_NAME'] as $key => $value) {
+                if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Description') {
+                  if (!empty($result['index']['R25:TEXT'][$key]) &&
+                    !empty($result['vals'][$result['index']['R25:TEXT'][$key]]['value'])
+                  ) {
+                    $desc = $result['vals'][$result['index']['R25:TEXT'][$key]]['value'];
+                    $mailto_pos = strpos($desc, '"mailto:');
+                    if ($mailto_pos !== FALSE) {
+                      $mailto_endpos = strpos($desc, '"', $mailto_pos + 8);
+                      if ($mailto_endpos !== FALSE) {
+                        $scheduler_email = substr($desc, $mailto_pos + 8, $mailto_endpos - ($mailto_pos + 8));
+                      }
                     }
+                  }
+                  break;
                 }
+              }
             }
-            if ($scheduler_id > 0) {
-                // if the reservation was made with quickbook, we need to pull the requestor's email address out of the event description
-                if ($quickbook_id == $scheduler_id) {
-                    $scheduler_email = '';
-                    if (!empty($result['index']['R25:TEXT_TYPE_NAME']) && is_array($result['index']['R25:TEXT_TYPE_NAME'])) {
-                        foreach ($result['index']['R25:TEXT_TYPE_NAME'] as $key => $value) {
-                            if (!empty($result['vals'][$value]['value']) && $result['vals'][$value]['value'] === 'Description') {
-                                if (!empty($result['index']['R25:TEXT'][$key]) &&
-                                    !empty($result['vals'][$result['index']['R25:TEXT'][$key]]['value']))
-                                {
-                                    $desc = $result['vals'][$result['index']['R25:TEXT'][$key]]['value'];
-                                    $mailto_pos = strpos($desc,'"mailto:');
-                                    if ($mailto_pos !== false) {
-                                        $mailto_endpos = strpos($desc,'"',$mailto_pos+8);
-                                        if ($mailto_endpos !== false) {
-                                            $scheduler_email = substr($desc,$mailto_pos+8, $mailto_endpos - ($mailto_pos+8));
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (!empty($scheduler_email) && $user->mail === $scheduler_email) {
-                    $can_cancel = true;
-                }
-            }
-        }
+          }
 
-        // if $can_cancel is false, we should check if the user is in a security group that can still be
-        // allowed to cancel
-        if (!$can_cancel) {
-            if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
-                $approvers = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
-                $can_cancel = in_array($user->mail, $approvers);
-            }
+          // if the Drupal user's email address is the same as the 25Live scheduler's, then the user can cancel the event.
+          if (!empty($scheduler_email) && $user->mail === $scheduler_email) {
+            $can_cancel = TRUE;
+          }
         }
-                
-        if ($can_cancel) {
-            $output = $result;
-        } else {
-            $output = false;
-        }
-    } else {
-        drupal_set_message('Unable to retrieve data from 25Live. Please try again later.','error',false);
-        $output = false;
+      }
     }
-    return $output;
+
+    // if $can_cancel is false, we should check if the user is in a security group that can still be
+    // allowed to cancel or confirm the event
+    if (!$can_cancel) {
+      // if the room has a security group set for event confirmation, we have the group id stored in the room array
+      if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
+        // get an array of email addresses for the people in the room's approver security group
+        $approvers = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
+        // see if the Drupal user's email address is in the array of approvers
+        $can_cancel = in_array($user->mail, $approvers);
+      }
+    }
+
+    if ($can_cancel) {
+      // if the user can cancel (or confirm) the event, return the event's XML arrays to the caller
+      $output = $result;
+    }
+    else {
+      // otherwise just output false
+      $output = FALSE;
+    }
+  }
+  else {
+    // set an error message if we couldn't contact 25Live.
+    drupal_set_message('Unable to retrieve data from 25Live. Please try again later.', 'error', FALSE);
+    $output = FALSE;
+  }
+  return $output;
 }
 
-function _stanford_r25_security_group_emails($secgroup_id = null, $reset = false)
-{
-    if (empty($secgroup_id)) return array();
-    $cache_id = 'stanford_r25:approvers:' . $secgroup_id;
-    if (!$reset) {
-        $list = &drupal_static(__FUNCTION__);
-        if (!$list) {
-            $cache = cache_get($cache_id);
-            if ($cache && !empty($cache->data)) {
-                $list = $cache->data;
-                return $list;
-            }
-        }
+// this function returns an array of email addresses for a 25Live security group
+// whose id is stored with a room configuration. The array will be stored in the
+// Drupal cache table unless forced to refresh with the $reset paramater. Saving
+// the room configuration in its admin page will reset this cached data.
+function _stanford_r25_security_group_emails($secgroup_id = NULL, $reset = FALSE) {
+  if (empty($secgroup_id)) {
+    return array();
+  }
+
+  // if the information is in the cache and we're not resetting it
+  // then return it from the cache
+  $cache_id = 'stanford_r25:approvers:' . $secgroup_id;
+  if (!$reset) {
+    $list = &drupal_static(__FUNCTION__);
+    if (!$list) {
+      $cache = cache_get($cache_id);
+      if ($cache && !empty($cache->data)) {
+        $list = $cache->data;
+        return $list;
+      }
     }
-    $list = array();
-    $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
-    if (!empty($sec_result['index']['R25:CONTACT_ID']) && is_array($sec_result['index']['R25:CONTACT_ID'])) {
-        foreach ($sec_result['index']['R25:CONTACT_ID'] as $key => $value) {
-            if (!empty($sec_result['vals'][$value]['value'])) {
-                $email = '';
-                if (!empty($sec_result['index']['R25:PRIMARY_EMAIL'][$key]) &&
-                    !empty($sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'])) {
-                    $email = $sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'];
-                }
-                $list[$sec_result['vals'][$value]['value']] = $email;
-            }
+  }
+
+  // otherwise, request the contact ids and email addresses for the security
+  // group members from the 25Live API and store them in the cache.
+  $list = array();
+  $sec_result = _stanford_r25_api_call('r25users', NULL, NULL, $secgroup_id);
+  if (!empty($sec_result['index']['R25:CONTACT_ID']) && is_array($sec_result['index']['R25:CONTACT_ID'])) {
+    foreach ($sec_result['index']['R25:CONTACT_ID'] as $key => $value) {
+      if (!empty($sec_result['vals'][$value]['value'])) {
+        $email = '';
+        if (!empty($sec_result['index']['R25:PRIMARY_EMAIL'][$key]) &&
+          !empty($sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'])
+        ) {
+          $email = $sec_result['vals'][$sec_result['index']['R25:PRIMARY_EMAIL'][$key]]['value'];
         }
+        $list[$sec_result['vals'][$value]['value']] = $email;
+      }
     }
-    cache_set($cache_id,$list);
-    return $list;
+  }
+  cache_set($cache_id, $list);
+  return $list;
 }

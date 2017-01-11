@@ -1,6 +1,7 @@
 (function ($) {
 
-    // javascript to display calendar and control embeds from 25Live Publisher
+    // javascript to display calendar and control embeds (spuds) from 25Live Publisher
+
     // get the webname of the "spud" from Drupal
     $(document).ready(function () {
 
