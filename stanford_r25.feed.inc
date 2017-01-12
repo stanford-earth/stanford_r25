@@ -15,7 +15,7 @@ function _stanford_r25_feed_get_value(&$results, $name, $key) {
 // Returns JSON array of event data to FullCalendar
 function _stanford_r25_feed($get_room_id = NULL) {
 
-  // format the request to the 25Live API
+  // format the request to the 25Live API from either POST or GET arrays
   $rooms = _stanford_r25_room_config_load();
   $room_id = '';
   $space_id = NULL;
@@ -42,19 +42,26 @@ function _stanford_r25_feed($get_room_id = NULL) {
       }
     }
   }
+  
+  // depending on the logged in user requesting this information, we want to include
+  // links to contact the event scheduler, or to confirm or cancel the event
   $approver_list = array();
   if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
     $approver_list = _stanford_r25_security_group_emails($rooms[$room_id]['approver_secgroup_id']);
   }
   $approver = FALSE;
+  
+  // if the user is Drupal user 1 or can administer rooms, let them approve
+  // and cancel events
   global $user;
   if ($user->uid == 1 || user_access('administer stanford r25') ||
     ($user->uid > 0 && in_array($user->mail, $approver_list))
   ) {
     $approver = TRUE;
   }
-  //$start = str_replace('-', '', $_POST['start']);
-  //$end = str_replace('-', '', $_POST['end']);
+  
+  // build the 25Live API request with the space id for the requested room and 
+  // for the start and end dates requested by fullcalendar
   $args = 'space_id=' . $space_id . '&scope=extended&start_dt=' . $start . '&end_dt=' . $end;
   $items = array();
   // make the API call
@@ -64,9 +71,6 @@ function _stanford_r25_feed($get_room_id = NULL) {
     foreach ($results['index']['R25:RESERVATION_ID'] as $key => $value) {
       $id = $results['vals'][$value]['value'];
       $event_id = _stanford_r25_feed_get_value($results, 'R25:EVENT_ID', $key);
-      if ($event_id == '695255') {
-        $xyz = 1;
-      }
       $title = _stanford_r25_feed_get_value($results, 'R25:EVENT_NAME', $key);
       $start = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_START_DT', $key);
       $end = _stanford_r25_feed_get_value($results, 'R25:RESERVATION_END_DT', $key);
@@ -195,5 +199,5 @@ function _stanford_r25_feed($get_room_id = NULL) {
       }
     }
   }
-  drupal_json_output($items);
+  drupal_json_output($items);  // return a json version of the output array to full calendar
 }

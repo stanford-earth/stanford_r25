@@ -1,4 +1,9 @@
 <?xml version="1.0"?>
+<!--
+This is the 25Live event reservation XML template. The bracketed tags are replaced
+by user-entered information from the Drupal reservation form, and the resulting
+XML is posted to 25Live.
+-->
 <r25:events xmlns:r25="http://www.collegenet.com/r25" xmlns:xl="http://www.w3.org/1999/xlink"
             pubdate="2013-04-29T12:54:30-08:00">
     <r25:event id="" status="new">

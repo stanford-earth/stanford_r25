@@ -2,19 +2,25 @@
 
 // the menu page callback function to build the main content for a calendar page
 function _stanford_r25_calendar_page($room = NULL) {
-  //$params = drupal_get_query_parameters();
+
+  // get default view and date params from URL if provided by a permalink
   $params = array();
   foreach (drupal_get_query_parameters() as $key => $param) {
     $params[$key] = check_plain($param);
   }
+
+  // load our room configuration info and prepare an $output string
   $rooms = _stanford_r25_room_config_load();
   $output = array();
+
+  // only output a page if we have the requested room, otherwise output MENU_NOT_FOUND
   if (!empty($room) && isset($rooms[$room]['status'])) {
+    // room status is disabled, view-only, tentative reservable or confirmed reservable
     $status = intval($rooms[$room]['status']);
 
-    // make sure we have a valid room
+    // make sure we have an enabled room, otherwise display an error msg (below)
     if ($status > STANFORD_R25_ROOM_STATUS_DISABLED) {
-      // set some JavaScript variables to be used at the browser
+      // set some JavaScript variables to be used at the browser by stanford_r25_fullcall.js
       drupal_add_js(array('stanfordR25Room' => $room), 'setting');
       drupal_add_js(array('stanfordR25Status' => $status), 'setting');
       drupal_add_js(array('stanfordR25MaxHours' => $rooms[$room]['max_hours']), 'setting');
@@ -30,6 +36,10 @@ function _stanford_r25_calendar_page($room = NULL) {
       }
       $multi_day = (!empty($rooms[$room]['multi_day'])) ? 1 : 0;
       drupal_add_js(array('stanfordR25MultiDay' => $multi_day), 'setting');
+
+      // the default calendar limit is for one year in the future, but we have
+      // a hook, hook_stanford_r25_fullcalendar_limit_alter(&$calendar_limit)
+      // where you can change it
       $calendar_limit = array(
         'room' => $room,
         'month' => date('n'),
@@ -38,6 +48,7 @@ function _stanford_r25_calendar_page($room = NULL) {
       drupal_alter('stanford_r25_fullcalendar_limit', $calendar_limit);
       drupal_add_js(array('stanfordR25CalendarLimitMonth' => $calendar_limit['month']), 'setting');
       drupal_add_js(array('stanfordR25CalendarLimitYear' => $calendar_limit['year']), 'setting');
+
       if (intval($rooms[$room]['caltype']) == 1) {
         // if the calendar is from 25Live Publisher, output the appropriate divs and javascript files
         $output['control_div'] = array(
@@ -61,7 +72,7 @@ function _stanford_r25_calendar_page($room = NULL) {
         drupal_add_js(array('stanfordR25Timezone' => date_default_timezone()), 'setting');
         drupal_add_js(libraries_get_path('fullcalendar') . '/lib/moment.min.js');
         drupal_add_js(libraries_get_path('fullcalendar') . '/fullcalendar.min.js');
-        // if we have the qtip tooltip library, add that
+        // if we have the qtip tooltip library, add that for authenticated users
         if (libraries_get_path('jquery.qtip') !== FALSE && user_is_logged_in()) {
           drupal_add_css(libraries_get_path('jquery.qtip') . '/jquery.qtip.css');
           drupal_add_js(libraries_get_path('jquery.qtip') . '/jquery.qtip.js');
@@ -69,10 +80,13 @@ function _stanford_r25_calendar_page($room = NULL) {
         }
         drupal_add_js(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_fullcal.js');
         drupal_add_css(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_selfserve.css');
+
+        // add the div where the calendar will be embedded
         $output['calendar'] = array(
           '#type' => 'markup',
           '#markup' => '<div id="calendar"></div>',
         );
+        // add markup for a permalink if so requested in the room config
         if (isset($rooms[$room]['permalink']) && intval($rooms[$room]['permalink']) == 1) {
           $output['permalink'] = array(
             '#type' => 'markup',
@@ -95,6 +109,8 @@ function _stanford_r25_calendar_page($room = NULL) {
 }
 
 // the reservation form callback is called by the reservation block
+// the user manually enters reservation info, and may also select date, time,
+// and duration from fullcalendar
 function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcount = 5, $contact_info = '', $external_acct = FALSE) {
   // keep the roomid for later processing
   $form['stanford_r25_booking_roomid'] = array(
@@ -123,8 +139,9 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
   );
 
   if (empty($rooms[$room]['multi_day'])) {
-    // default booking duration is limited to 2 hours in 30 minute increments
-    // but a room can have a different value
+    // for non-multi-day rooms. default booking duration is limited to 2 hours
+    // in 30 minute increments, but the room config can have a different value.
+    // A value of 0 hours is the same as a value of 24 hours.
     $max_hours = 2;
     if (!empty($rooms[$room]['max_hours'])) {
       $max_hours = intval($rooms[$room]['max_hours']);
@@ -149,8 +166,10 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
     else {
       $hours_array[0] = '30 minutes';
       $hours_array[1] = '60 minutes';
-      $hours_array[2] = '90 minutes';
-      $hours_array[3] = '120 minutes';
+      if ($max_hours > 1) {
+        $hours_array[2] = '90 minutes';
+        $hours_array[3] = '120 minutes';
+      }
     }
     $form['stanford_r25_booking_duration'] = array(
       '#type' => 'select',
@@ -161,6 +180,7 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
     );
   }
   else {
+    // multi-day rooms have an end date and time instead of duration
     $max_hours = '';
     $form['stanford_r25_booking_enddate'] = array(
       '#type' => 'date_popup',
@@ -194,6 +214,9 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
   );
 
   // check for event attribute fields, and build 'em
+  // each of these corresponds to a "custom attribute" for events in 25Live
+  // and are specified in our room config as an array of attrib ids, field name,
+  // and field type
   if (!empty($rooms[$room]['event_attribute_fields'])) {
     foreach ($rooms[$room]['event_attribute_fields'] as $attr_id => $attr_info) {
       switch ($attr_info['type']) {
@@ -218,6 +241,7 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
     }
   }
 
+  // in the room config, we can separately specify a contact field attribute
   if (!empty($rooms[$room]['contact_attr_field'])) {
     foreach ($rooms[$room]['contact_attr_field'] as $attr_id => $attr_info) {
       switch ($attr_info['type']) {
@@ -243,6 +267,10 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
     }
   }
 
+  // if the user making the reservation has authenticated in some external
+  // fashion (is not logged in as a Drupal user) then we should have been
+  // passed the user's displayname and email address in the function call.
+  // save them as hidden fields on the reservation form.
   if (!empty($external_acct) && is_array($external_acct)) {
     if (!empty($external_acct['R25_EXTERNAL_DISPLAYNAME']) &&
       is_string($external_acct['R25_EXTERNAL_DISPLAYNAME'])
@@ -261,12 +289,16 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
       );
     }
   }
-  // submit button, d'uh
+
+  // submit button for the reservation!
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Reserve'),
   );
-  // display some reservation instructions if available
+
+  // display some reservation instructions if available, replacing
+  // the [max_duration] tag with the room's maximum meeting duration.
+  // Use the site-wide booking instruction unless the room as an override.
   if (!empty($rooms[$room]['override_booking_instructions']['value'])) {
     $booking_instr = $rooms[$room]['override_booking_instructions'];
   }
@@ -288,32 +320,12 @@ function stanford_r25_reservation($form, &$form_state, $room = '', $max_headcoun
 
 }
 
-/**
- * // some date and time formatting stuff - taking input from form date/time and duration fields
- * // and returning start and end times in W3C format to pass to the 25Live web services api.
- * function _stanford_r25_format_date_and_time($date, $booking_duration, $max_hours)
- * {
- * //$date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
- * //$date_errors = DateTime::getLastErrors();
- * // don't allow reservations more than 1/2 hour in the past. we're not a time machine.
- * //if (date_timestamp_get($date) < (time() - 1800)) {
- * //    $date = false;
- * //}
- * //if (!$date || $date_errors["warning_count"] > 0 || $date_errors["error_count"] > 0) {
- * //    return false;
- * // }
- * $duration = intval($booking_duration);
- * if ($duration < 0 || $duration > (($max_hours*2)-1)) return false;
- * $duration = ($duration * 30) + 30;
- * return array('day' => $date->format('Y-m-d'), 'start' => $date->format(DateTime::W3C),
- * 'end' => $date->add(new DateInterval('PT' . $duration . 'M'))->format(DateTime::W3C));
- * }
- **/
-
 // reservation form validation - formats the date strings and stores them in form 'storage' for the submit routine
 function stanford_r25_reservation_validate($form, &$form_state) {
 
-  $booking_info = array();
+  $booking_info = array();  // store booking info in form storage after validation
+
+  // make sure we have a valid room id in the form input
   $rooms = _stanford_r25_room_config_load();
   if (empty($form_state['input']['stanford_r25_booking_roomid']) || !isset($rooms[$form_state['input']['stanford_r25_booking_roomid']])) {
     form_set_error('stanford_r25_booking_roomid', 'Invalid room id requested.');
@@ -323,6 +335,7 @@ function stanford_r25_reservation_validate($form, &$form_state) {
     $booking_info['room'] = $rooms[$form_state['input']['stanford_r25_booking_roomid']];
   }
 
+  // make sure the current user has permission to book the room
   $can_book = _stanford_r25_can_book($booking_info['room']['machine_name']);
   if (!$can_book['can_book']) {
     form_set_error('stanford_r25_booking_reason', 'User does not have permission to book rooms.');
@@ -330,6 +343,8 @@ function stanford_r25_reservation_validate($form, &$form_state) {
   }
 
   // make sure we have a valid date
+  // some date and time formatting stuff - taking input from form date/time and duration fields
+  // and returning start and end times in W3C format to pass to the 25Live web services api.
   $booking_date = $form_state['input']['stanford_r25_booking_date'];
   $date = DateTime::createFromFormat("Y-m-d g:i a", $booking_date['date'] . ' ' . $booking_date['time']);
   $date_errors = DateTime::getLastErrors();
@@ -343,6 +358,8 @@ function stanford_r25_reservation_validate($form, &$form_state) {
     return;
   }
 
+  // if this is a multi-day capable room, check the end date the same way we just checked
+  // the start date, and make sure it isn't early than the start date.
   $end_date = 0;
   if (!empty($form_state['input']['stanford_r25_booking_enddate'])) {
     $booking_end_date = $form_state['input']['stanford_r25_booking_enddate'];
@@ -393,18 +410,14 @@ function stanford_r25_reservation_validate($form, &$form_state) {
     );
   }
 
-  //$date_strs = _stanford_r25_format_date_and_time($form_state['input']['stanford_r25_booking_date'],
-  //    $form_state['input']['stanford_r25_booking_duration'],$booking_info['room']['max_hours']);
-  //if ($date_strs === false) {
-  //    form_set_error('stanford_r25_booking_time', 'Invalid date and time or duration submitted.');
-  //} else {
+  // store booking info in form storage
   $booking_info['dates'] = $date_strs;
-  //}
   $form_state['storage']['stanford_r25_booking'] = $booking_info;
 }
 
 // submits the reservation request to 25Live webservices
 function stanford_r25_reservation_submit($form, &$form_state) {
+
   // make sure the user has access, that the needed information is available, and the room is bookable
   if (empty($form_state['storage']['stanford_r25_booking']['dates']) || empty($form_state['storage']['stanford_r25_booking']['room'])) {
     drupal_set_message('Insufficient booking information was provided.', 'error');
@@ -417,7 +430,6 @@ function stanford_r25_reservation_submit($form, &$form_state) {
     unset($form_state['storage']['stanford_r25_booking']);
     return;
   }
-
   $can_book = _stanford_r25_can_book($form_state['storage']['stanford_r25_booking']['room']['machine_name']);
   if (!$can_book['can_book']) {
     drupal_set_message('You do not have permission to book this room.', 'error');
@@ -425,14 +437,21 @@ function stanford_r25_reservation_submit($form, &$form_state) {
     return;
   }
 
-  $mail_list = '';
+  $mail_list = '';  // we'll build a list of email addresses to send reservation info to
+
+  // tentative reservations will generate 25Live "to do tasks" for approvers if the room
+  // has an approver security group id associated with it.
   $todo_insert = '';
   if ($event_state == STANFORD_R25_ROOM_STATUS_TENTATIVE &&
     !empty($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id'])
   ) {
+    // get the list of email addresses for the security group that can do the approvals
     $approver_list =
       _stanford_r25_security_group_emails($form_state['storage']['stanford_r25_booking']['room']['approver_secgroup_id']);
     if (!empty($approver_list)) {
+      // for each approver in the security group, add their email address to the list and
+      // create a "to do task" XML snippet with their 25Live id and the event information
+      // to be added to the request XML.
       $todo_str = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_todo.xml');
       foreach ($approver_list as $key => $value) {
         $todo_temp = str_replace('[r25_start_date_time]', $form_state['storage']['stanford_r25_booking']['dates']['start'], $todo_str);
@@ -447,6 +466,8 @@ function stanford_r25_reservation_submit($form, &$form_state) {
     }
   }
 
+  // if there are 25Live custom attributes associated with this event, add the XML snippet for each attribute
+  // with its id, type, and value to the request XML.
   $attr_insert = '';
   $attr_str = file_get_contents(drupal_get_path('module', 'stanford_r25') . '/stanford_r25_reserve_attr.xml');
   $room = $form_state['storage']['stanford_r25_booking']['room'];
@@ -460,6 +481,8 @@ function stanford_r25_reservation_submit($form, &$form_state) {
       }
     }
   }
+
+  // if there is a 25Live custom attribute we've defined for contact information, add the XML snippet for it to the request
   if (!empty($room['contact_attr_field'])) {
     foreach ($room['contact_attr_field'] as $key => $value) {
       if (!empty($form_state['values']['stanford_r25_contact_' . $key])) {
@@ -486,6 +509,8 @@ function stanford_r25_reservation_submit($form, &$form_state) {
   $xml = str_replace('[r25_space_id]', $form_state['storage']['stanford_r25_booking']['room']['space_id'], $xml);
   $xml = str_replace('[r25_todo]', $todo_insert, $xml);
   $xml = str_replace('[r25_attr]', $attr_insert, $xml);
+
+  // we want to put some information about the user making this request into the event description to be displayed on the calendar
   global $user;
   $res_username = '';
   $res_usermail = '';
@@ -536,6 +561,10 @@ function stanford_r25_reservation_submit($form, &$form_state) {
       }
     }
   }
+
+  // if the reservation request was successful, we want to add any billing
+  // information to the request if defined, display a success message on the
+  // page, and send an email to any approvers or others specified.
   if ($success) {
 
     // if the booking was successful, format and display a message to that effect
@@ -547,6 +576,8 @@ function stanford_r25_reservation_submit($form, &$form_state) {
     }
     drupal_set_message($msg);
 
+    // if this event is billable, we have to retrieve billing XML for the event, update
+    // the billing group code, and PUT the XML back to the 25Live system.
     $estimated_charge = 0;
     $billable = FALSE;
     $eventid = $result['vals'][$result['index']['R25:EVENT_ID'][0]]['value'];
@@ -670,28 +701,43 @@ function stanford_r25_reservation_submit($form, &$form_state) {
       _stanford_r25_api_call('delete', NULL, NULL, $event_id);
     }
   }
+
   // remove the storage we set up in validate
   unset($form_state['storage']['stanford_r25_booking']);
 }
 
+// this function can be used to either cancel or confirm a reservation and uses
+// the Drupal confirm_form function to ask users if they're sure.
 function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_id, $start) {
-    $op = 'cancel';
-    $opout = 'cancellation';
 
-    $cur = current_path();
-    if (strpos($cur,'confirm') !== false) {
-        $op = 'confirm';
-        $opout = 'confirmation';
-    }
+  // the default assumption is this is a cancel operation
+  $op = 'cancel';
+  $opout = 'cancellation';
+
+  // but we change this to confirm if the current path tells us so.
+  $cur = current_path();
+  if (strpos($cur, 'confirm') !== FALSE) {
+    $op = 'confirm';
+    $opout = 'confirmation';
+  }
+
+  // make sure we have a valid room and that the user has the rights to cancel
+  // or confirm this reservation. The _stanford_r25_user_can_cancel_or_confirm
+  // function returns the XML data for the even if the user has access.
   $rooms = _stanford_r25_room_config_load();
   $result = _stanford_r25_user_can_cancel_or_confirm($room_id, $event_id, $op);
   if (!$result) {
     drupal_access_denied();
   }
+
+  // get the event title from the XML for display
   $title = '';
   if (!empty($result['vals'][$result['index']['R25:EVENT_NAME'][0]]['value'])) {
     $title = $result['vals'][$result['index']['R25:EVENT_NAME'][0]]['value'];
   }
+
+  // find out if this is a recurring event so we can ask whether the operation
+  // is for the instance or the entire series.
   $event_count = 0;
   if (!empty($result['index']['R25:RESERVATION_START_DT']) &&
     is_array($result['index']['R25:RESERVATION_START_DT'])
@@ -700,6 +746,8 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
   }
 
   if (empty($form_state['input'])) {
+    // if we are in the "are you sure" stage, build up the message to display
+    // to the user with the event title, room name, and date.
     $msg = 'Do you want to ' . $op . ' reservation "';
     if (!empty($title)) {
       $msg .= check_plain($title);
@@ -728,37 +776,42 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
       '#markup' => t($msg),
     );
 
+    // if the event is part of a recurring series, display all the dates
+    // and let user know confirmation applies to all instances in the series
+    // or if operation is cancel, let them choose entire series or occurence.
     if ($event_count > 1) {
-        $msg_text = 'This reservation is part of a series. ' . ucfirst($opout) . ' will apply to all dates.<br />';
-        if (!empty($result['index']['R25:RESERVATION_START_DT']) &&
-            is_array($result['index']['R25:RESERVATION_START_DT'])) {
-            $msg_text .= 'Reservation dates: <br/>';
-            foreach ($result['index']['R25:RESERVATION_START_DT'] as $key => $value) {
-                if (!empty($result['vals'][$value]['value'])) {
-                    $s_date = DateTime::createFromFormat(DATE_W3C, $result['vals'][$value]['value']);
-                    $msg_text .= $s_date->format("l, F j, Y g:i a") . '<br />';
-                }
-            }
-            $msg_text .= '<br />';
+      $msg_text = 'This reservation is part of a series. ' . ucfirst($opout) . ' will apply to all dates.<br />';
+      if (!empty($result['index']['R25:RESERVATION_START_DT']) &&
+        is_array($result['index']['R25:RESERVATION_START_DT'])
+      ) {
+        $msg_text .= 'Reservation dates: <br/>';
+        foreach ($result['index']['R25:RESERVATION_START_DT'] as $key => $value) {
+          if (!empty($result['vals'][$value]['value'])) {
+            $s_date = DateTime::createFromFormat(DATE_W3C, $result['vals'][$value]['value']);
+            $msg_text .= $s_date->format("l, F j, Y g:i a") . '<br />';
+          }
         }
-        $form['markup2'] = array(
-            '#markup' => t($msg_text),
+        $msg_text .= '<br />';
+      }
+      $form['markup2'] = array(
+        '#markup' => t($msg_text),
+      );
+      if ($op == 'cancel') {
+        $form['series'] = array(
+          '#type' => 'radios',
+          '#default_value' => 1,
+          '#options' => array(
+            1 => 'Cancel this occurrence',
+            2 => 'Cancel entire series'
+          ),
         );
-        if ($op == 'cancel') {
-            $form['series'] = array(
-                '#type' => 'radios',
-                '#default_value' => 1,
-                '#options' => array(
-                    1 => 'Cancel this occurrence',
-                    2 => 'Cancel entire series'
-                ),
-            );
-        } else {
-            $form['series'] = array(
-                '#type' => 'hidden',
-                '#value' => 2,
-            );
-        }
+      }
+      else {
+        $form['series'] = array(
+          '#type' => 'hidden',
+          '#value' => 2,
+        );
+      }
     }
     else {
       $form['series'] = array(
@@ -768,6 +821,9 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
     }
   }
   else {
+    // if we are back from "are you sure" and want to proceed with the operation
+    // then take the XML string and update the appropriate sections for occurence
+    // or entire event with the new event state
     $xml_string = $result['raw-xml'];
     $find_str = 'status="est"';
     if ($form_state['input']['series'] == 1) {
@@ -821,14 +877,17 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
         $pos1 = strpos($xml_string, '<r25:state>');
         $pos2 = strpos($xml_string, '</r25:state>');
         if ($pos1 !== FALSE && $pos2 !== FALSE) {
-            $new_state = ($op == 'confirm') ? '2' : '99';
+          $new_state = ($op == 'confirm') ? '2' : '99';
           $xml_string = substr_replace($xml_string, '<r25:state>' . $new_state . '</r25:state>', $pos1, $pos2 + 12 - $pos1);
         }
       }
     }
 
+    // put the event XML back to 25Live to set the new cancel or confirm state
     _stanford_r25_api_call('event-put', NULL, NULL, $xml_string, $event_id);
 
+    // if we want to email room approvers or the user about the confirmation
+    // or cancellation, build up the email list and send information
     if ($rooms[$room_id]['email_confirms_and_cancels']) {
       $secgroup_id = '';
       if (!empty($rooms[$room_id]['approver_secgroup_id'])) {
@@ -842,7 +901,7 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
       global $user;
       $body = array();
       $body[] = 'A Room Reservation ' . $opout . ' request was sent by ' . $user->name;
-      $body[] =' for "' . $title . '" in room ' . $rooms[$room_id]['display_name'];
+      $body[] = ' for "' . $title . '" in room ' . $rooms[$room_id]['display_name'];
       $startdate = DateTime::createFromFormat(DATE_W3C, $start);
       if ($event_count > 1) {
         if ($form_state['input']['series'] == 1) {
@@ -864,9 +923,12 @@ function _stanford_r25_cancel_reservation($form, &$form_state, $room_id, $event_
       );
       drupal_mail('stanford_r25', $event_id, $email_list, language_default(), $params);
     }
+    // the operation is done, so go back to the calendar page
     drupal_goto('/r25/' . $room_id . '/calendar');
   }
-    $optext = ucfirst($op);
+
+  // display the Drupal "are you sure?" page.
+  $optext = ucfirst($op);
   $form = confirm_form($form, $optext . ' Reservation', 'r25/' . $room_id . '/calendar', NULL, $optext . ' Reservation', 'Go Back to Calendar', 'cancel_res');
   return $form;
 }
@@ -925,8 +987,4 @@ function _stanford_r25_build_event_email_list($results, $secgroup_id, $extra_lis
 
   // return the result as a string
   return implode(', ', $mail_array);
-}
-
-function _stanford_r25_confirm_reservation($form, &$form_state, $room_id, $event_id, $start, $title, $event_count) {
-  $xyz = 1;
 }

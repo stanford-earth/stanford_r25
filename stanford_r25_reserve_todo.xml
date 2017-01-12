@@ -1,3 +1,9 @@
+<!--
+When a tentative reservation is made that requires confirmation,
+this XML snippet is added to the reservation request for each member of the
+room's approval security group with the appropriate bracketed tags replaced
+by reservation info and the approver's 25Live id.
+-->
 <r25:todo id="" status="new">
   <r25:cur_todo_state>1</r25:cur_todo_state>
   <r25:todo_name>Reservation needs approval</r25:todo_name>
@@ -9,4 +15,3 @@
   <r25:cur_assigned_to_id>[r25_approver_id]</r25:cur_assigned_to_id> 
   <r25:cur_assigned_by_id>[r25_credential_id]</r25:cur_assigned_by_id> 
 </r25:todo>
-

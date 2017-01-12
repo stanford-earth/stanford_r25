@@ -1,3 +1,9 @@
+<!--
+When a reservation is made for a room that includes additional custom attributes,
+this XML snippet is added to the reservation request for each attribute listed in the
+room's configuration with the various bracketed tags replaced by the attribute's
+25Live id, type, and value as entered by the user on the reservation form.
+-->
 <r25:custom_attribute status="new">
     <r25:attribute_id>[r25_attr_id]</r25:attribute_id>
     <r25:attribute_type>[r25_attr_type]</r25:attribute_type>
