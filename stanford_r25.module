@@ -456,7 +456,7 @@ function _stanford_r25_room_title($config = NULL, $default_title = '') {
   return $room;
 }
 
-// return a link to the add room page if the list of rooms is empty
+// return a link to the add room page at the top of the room list
 function stanford_r25_menu_local_tasks_alter(&$data, $router_item, $root_path) {
   switch ($root_path) {
     case STANFORD_R25_MENU_PATH . '/list':
