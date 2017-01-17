@@ -559,7 +559,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     ),
   );
 
-  //
+  // Internal 25Live "space id" for the room. Can be found in results from call to https://webservices.collegenet.com/r25ws/wrd/stanford/run/spaces.xml
+  // (replacing stanford with your organization name)
   $form['space_id'] = array(
     '#title' => t('R25 Room ID'),
     '#type' => 'textfield',
@@ -576,6 +577,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
       )
     ),
   );
+  // the event description field found in the 25Live event wizard allows more characters than the event title
   $form['description_as_title'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show event description as event name in FullCalendar'),
@@ -583,6 +585,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $config['description_as_title'],
     '#description' => t("Check if you would like to use the Event Description field instead of the Event Name in the FullCalendar time slot."),
   );
+  // give users a way to get back to a particular fullcalendar date and view
   $form['permalink'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show a permlink on FullCalendar pages for the view and date'),
@@ -590,6 +593,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $config['permalink'],
     '#description' => t('Useful if you want to distribute links to specific calendar pages to people.'),
   );
+  // have room reservations obey the blackout periods specified for the entire site
   $form['honor_blackouts'] = array(
     '#type' => 'checkbox',
     '#title' => t('Honor Blackout Dates for Reservations'),
@@ -598,6 +602,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#description' => t('Only allow reservations if current and requested dates are after the end of the most ' .
       'recent blackout period and before the start of the next blackout period.'),
   );
+  // the name of the 25Live security group (ususally the same as a Stanford workgroup, but not necessarily so)
+  // this will be used to generate and cache a list of email addresses to be contacted for tentative reservations
   $form['approver_secgroup_name'] = array(
     '#title' => t('Approver Security Group'),
     '#type' => 'textfield',
@@ -606,6 +612,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#description' => t('The R25 Security Group, also a Stanford Workgroup, of those who can approve tentative ' .
       'reservation requests. All members of this group will receive email with the request information. '),
   );
+  // the 25Live security group id that corresponds to the security group name. looked up on form submit.
   $form['approver_secgroup_id'] = array(
     '#title' => t('Approver Security Group ID'),
     '#type' => 'hidden',
@@ -613,6 +620,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $config['approver_secgroup_id'],
     '#description' => t('The corresponding 25Live id number for the security group specified above.'),
   );
+  // whether to email members of the security group and additional email list when an event is canceled or confirmed
+  // through this website
   $form['email_confirms_and_cancels'] = array(
     '#type' => 'checkbox',
     '#title' => t('Email cancellations to approvers'),
@@ -620,6 +629,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $config['email_confirms_and_cancels'],
     '#description' => t('Check if room approvers should receive an email when a user self-service cancels a reservation.'),
   );
+  // additional email addresses to get confirm,cancel, and tentative reservation emails.
   $form['email_list'] = array(
     '#title' => t('Email List'),
     '#type' => 'textfield',
@@ -627,6 +637,8 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $config['email_list'],
     '#description' => t('Comma-separated list of email addresses which should receive notification of any reservation requests. Leave blank for "none".'),
   );
+
+  // a fieldset of rarely-needed, advanced settings
   $form['advanced'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advanced Options'),
@@ -634,6 +646,7 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
+  // whether the room allows reservations only by drupal permission, or only by external authentication, or either
   $form['advanced']['authentication'] = array(
     '#type' => 'radios',
     '#title' => t('Authentication Method'),
@@ -645,12 +658,16 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     ),
     '#description' => t('Whether the room is bookable based on Drupal accounts, roles, and permissions or through external means.'),
   );
+  // whether the room may be reserved for multiple-day events
   $form['advanced']['multi_day'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow multi-day reservations'),
     '#description' => t('Start time will refer to first day; end-time will refer to last day; days in-between will be full days.'),
     '#default_value' => $config['multi_day'],
   );
+  // whether there are additional 25Live Event Custom Attribute fields that should be added to the reservation form.
+  // provide the comma-separated ids for the wanted attributes; see attribute list at
+  // https://webservices.collegenet.com/r25ws/wrd/stanford/run/evatrb.xml (substitute your inst for 'stanford'
   $form['advanced']['event_attributes'] = array(
     '#type' => 'textfield',
     '#title' => t('Event Attributes'),
@@ -658,18 +675,21 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#description' => t('If custom attribute fields need to be included on the reservation form, enter their R25 ' .
       'id codes as a comma-separated list. Put an asterisk after a number to indicate a required field.'),
   );
+  // whether there is an additional contact attribute defined for your event; provide the attribute id as above
   $form['advanced']['contact_attr'] = array(
     '#type' => 'textfield',
     '#title' => t('Contact Attribute'),
     '#default_value' => $config['contact_attr'],
     '#description' => t("Event Custom Attribute in which we will store the user's contact information."),
   );
+  // a billing code to use if you want to auto-select a billing code for this event
   $form['advanced']['auto_billing_code'] = array(
     '#type' => 'textfield',
     '#title' => t('Auto-Bill Rate Group ID'),
     '#default_value' => $config['auto_billing_code'],
     '#description' => t("The rate group id to use to auto-bill for the use of this room. Leave blank for none."),
   );
+  // override default booking instructions for this room
   $default_booking_instr = $config['override_booking_instructions'];
   $form['advanced']['override_booking_instructions'] = array(
     '#type' => 'text_format',
@@ -678,19 +698,21 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#default_value' => $default_booking_instr['value'],
     '#format' => $default_booking_instr['format'],
   );
+  // checkbox if you want to store booking information in $form_state['storage'] for post-processing in your own module
   $form['advanced']['postprocess_booking'] = array(
     '#type' => 'checkbox',
     '#title' => t('Postprocess Booking'),
     '#description' => t("If you want to write you own submit hook to do something after a booking is complete, check this box and booking info will be placed in \$form_state['storage']"),
     '#default_value' => $config['postprocess_booking'],
   );
-
+  // set a created date
   $form['created'] = array(
     '#title' => t('Created on'),
     '#type' => 'textfield',
     '#default_value' => $config['created'],
     '#disabled' => TRUE,
   );
+  // submit button, but of course
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
     '#type' => 'submit',
@@ -741,7 +763,7 @@ function _stanford_r25_room_config_validate($form, &$form_state) {
   }
 }
 
-// save the room configuation
+// save the room configuation; currently saves to a room array stored in the variables table
 function _stanford_r25_room_config_submit($form, &$form_state) {
   $fields = array(
     'machine_name' => (string) $form_state['values']['machine_name'],
@@ -778,12 +800,16 @@ function _stanford_r25_room_config_submit($form, &$form_state) {
   $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';
 }
 
+// on submission, query the 25Live database for a bunch of information about the room
+// and store in the array with the room confir
 function _stanford_r25_update_room_info($space_id = NULL) {
   $room_info = array();
   $default_layout = 0;
   if (!empty($space_id)) {
+    // get the room info using the api
     $results = _stanford_r25_api_call('roominfo', NULL, NULL, $space_id);
     if ($results) {
+      // identify the default room layout, if one is defined, otherwise use the first one
       if (!empty($results['index']['R25:DEFAULT_LAYOUT']) && is_array($results['index']['R25:DEFAULT_LAYOUT'])) {
         foreach ($results['index']['R25:DEFAULT_LAYOUT'] as $dlkey => $dlval) {
           if ($results['vals'][$dlval]['value'] == 'T') {
@@ -792,14 +818,17 @@ function _stanford_r25_update_room_info($space_id = NULL) {
           }
         }
       }
+      // get the room capacity for the layout
       $room_info['capacity'] = empty($results['index']['R25:LAYOUT_CAPACITY'][$default_layout]) ? NULL :
         $results['vals'][$results['index']['R25:LAYOUT_CAPACITY'][$default_layout]]['value'];
+      // get any comments and instructions about the room
       $room_info['comments'] = empty($results['index']['R25:COMMENTS'][0]) ? NULL : $results['vals'][$results['index']['R25:COMMENTS'][0]]['value'];
       $room_info['layout_name'] = empty($results['index']['R25:LAYOUT_NAME'][$default_layout]) ? NULL :
         $results['vals'][$results['index']['R25:LAYOUT_NAME'][$default_layout]]['value'];
       $room_info['layout_instruction'] = empty($results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]) ? NULL :
         empty($results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]]['value']) ? NULL :
           $results['vals'][$results['index']['R25:LAYOUT_INSTRUCTION'][$default_layout]]['value'];
+      // build a list of features for the room layout
       $layout_features = '';
       $first_feature = TRUE;
       if (!empty($results['index']['R25:FEATURE_NAME'][0])) {
@@ -812,7 +841,7 @@ function _stanford_r25_update_room_info($space_id = NULL) {
         }
       }
       $room_info['layout_features'] = empty($layout_features) ? NULL : $layout_features;
-
+      // build a list of categories for the room
       $layout_categories = '';
       $first_category = TRUE;
       if (!empty($results['index']['R25:CATEGORY_NAME'][0])) {
@@ -826,7 +855,7 @@ function _stanford_r25_update_room_info($space_id = NULL) {
       }
       $room_info['layout_categories'] = empty($layout_categories) ? NULL : $layout_categories;
 
-      // get a room photo if we are using them and available for this room
+      // get a room photo if available and store in Drupal files
       $photo_id = NULL;
       $image_directory = variable_get('stanford_r25_room_image_directory', NULL);
       if (!empty($image_directory) &&
@@ -852,6 +881,7 @@ function _stanford_r25_update_room_info($space_id = NULL) {
   return $room_info;
 }
 
+// retrieve the 25Live security group id given the security group name
 function _stanford_r25_secgroup_id($secgroup) {
   $groupid = 0;
   if (!empty($secgroup)) {
@@ -863,6 +893,8 @@ function _stanford_r25_secgroup_id($secgroup) {
   return $groupid;
 }
 
+// if using the custom event attributes, use the ids in the list to retrieve the name and type of
+// the attribute fields
 function _stanford_r25_update_event_attribute_fields($attr_list, $contact = FALSE) {
   $field_info = array();
   if (!empty($attr_list)) {
@@ -885,7 +917,7 @@ function _stanford_r25_update_event_attribute_fields($attr_list, $contact = FALS
   return $field_info;
 }
 
-// delete a room from a Delete button on the edit form (currently disabled)
+// delete a room from a Delete button on the edit form
 function _stanford_r25_room_delete_submit($form, &$form_state) {
   _stanford_r25_room_config_delete_room($form_state['values']['machine_name']);
   $form_state['redirect'] = STANFORD_R25_MENU_PATH . '/list';
