@@ -1,11 +1,12 @@
 <?php
 
+// return a temp directory location found under the site's /sites/default directory
 function _user0_webauth_tmp_directory() {
   $base_path = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'index.php'));
   return $base_path . conf_path() . '/user0_webauth/tmp';
 }
 
-// implement hook_stanford_r25_link
+// implement hook_stanford_r25_link, returning a link to the external authentication script
 function user0_webauth_stanford_r25_external_link($link_text = 'Authenticate') {
 
   global $base_url, $base_path, $cookie_domain;
@@ -21,7 +22,7 @@ function user0_webauth_stanford_r25_external_link($link_text = 'Authenticate') {
   return l($link_text, $user0_webauth_url, $options);
 }
 
-// implement hook stanford_r25_external_user
+// implement hook stanford_r25_external_user returning an array of information about the user
 function user0_webauth_stanford_r25_external_user() {
   $return_data = false;
   if (!empty($_COOKIE['user0_webauth'])) {
@@ -40,6 +41,7 @@ function user0_webauth_stanford_r25_external_user() {
   return $return_data;
 }
 
+// implement hook stanford_r25_external_user_display to return a contact information string about the user
 function user0_webauth_stanford_r25_external_user_display($user_info) {
     $contact = '';
     if (!empty($user_info['R25_EXTERNAL_DISPLAYNAME'])) $contact .= $user_info['R25_EXTERNAL_DISPLAYNAME']."\r\n";
@@ -50,6 +52,7 @@ function user0_webauth_stanford_r25_external_user_display($user_info) {
     return $contact;
 }
 
+// a cron function to clean up files in the temp directory more than 10 hours old
 function user0_webauth_cron() {
         
     // cleanup old tmp files

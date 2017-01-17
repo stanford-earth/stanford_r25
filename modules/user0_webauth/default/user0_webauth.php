@@ -1,4 +1,7 @@
 <?php
+    // this script, running under webauth, creates a temp file with LDAP information
+    // about the logged in user, and creates a cookie containing the temp file's name
+    // and then redirects back to the page what called it.
     if (!empty($_REQUEST['base_path']) && !empty($_REQUEST['cookie_domain']) &&
         !empty($_REQUEST['destination'])) {
         $tmp_dir = substr($_SERVER['SCRIPT_FILENAME'],0,strpos($_SERVER['SCRIPT_FILENAME'],'user0_webauth.php')) . 'tmp';

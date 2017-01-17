@@ -2,6 +2,8 @@
 
 /**
  * Implementation of hook_install
+ * creates a directory under 'sites/default' with a login script, an htaccess file,
+ * and a temp directory.
  */
 function user0_webauth_install() {
 
