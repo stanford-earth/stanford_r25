@@ -278,6 +278,10 @@ function stanford_r25_block_view($delta = "") {
           $block['subject'] = '';
           $block['content'] = 'This room is currently blacked out for reservations. Please contact your ' .
             'department administration for more information.';
+          if (!empty($rooms[$room_id]['override_blackout_instructions']['value'])) {
+            $block['content'] = check_markup($rooms[$room_id]['override_blackout_instructions']['value'],
+              $rooms[$room_id]['override_blackout_instructions']['format']);
+          }
         }
         else {
           // see if the current user has access to book room

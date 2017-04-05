@@ -470,8 +470,12 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
       'email_confirms_and_cancels' => 0,
       'override_booking_instructions' => array(
         'value' => '',
-        'format' => filter_default_format()
-      )
+        'format' => filter_default_format(),
+      ),
+      'override_blackout_instructions' => array(
+        'value' => '',
+        'format' => filter_default_format(),
+      ),
     );
   }
 
@@ -705,6 +709,15 @@ function _stanford_r25_room_config($form, &$form_state, $roomid = NULL) {
     '#description' => t("If you want to write you own submit hook to do something after a booking is complete, check this box and booking info will be placed in \$form_state['storage']"),
     '#default_value' => $config['postprocess_booking'],
   );
+  // override default booking instructions for this room
+  $default_blackout_instr = $config['override_blackout_instructions'];
+  $form['advanced']['override_blackout_instructions'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Override Blackout Instructions'),
+    '#description' => t('User instructions for booking during blackout periods, if "Honor Blackout Dates" is checked. Default site message displayed if left blank.'),
+    '#default_value' => $default_blackout_instr['value'],
+    '#format' => $default_blackout_instr['format'],
+  );
   // set a created date
   $form['created'] = array(
     '#title' => t('Created on'),
@@ -780,6 +793,10 @@ function _stanford_r25_room_config_submit($form, &$form_state) {
     'description_as_title' => (int) $form_state['values']['description_as_title'],
     'permalink' => (int) $form_state['values']['permalink'],
     'honor_blackouts' => (int) $form_state['values']['honor_blackouts'],
+    'override_blackout_instructions' => array(
+      'value' => $form_state['values']['override_blackout_instructions']['value'],
+      'format' => $form_state['values']['override_blackout_instructions']['format'],
+    ),
     'approver_secgroup_name' => (string) $form_state['values']['approver_secgroup_name'],
     'approver_secgroup_id' => (int) $form_state['values']['approver_secgroup_id'],
     'email_confirms_and_cancels' => (int) $form_state['values']['email_confirms_and_cancels'],
