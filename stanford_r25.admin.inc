@@ -879,6 +879,7 @@ function _stanford_r25_update_room_info($space_id = NULL) {
         !empty($results['index']['R25:LAYOUT_PHOTO_ID'][$default_layout])
       ) {
         $photo_id = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][$default_layout]]['value'];
+/*
         $photo = _stanford_r25_api_call('roomphoto', NULL, NULL, $photo_id);
         if ($photo) {
           $destination = _stanford_r25_file_path($photo_id);
@@ -890,7 +891,10 @@ function _stanford_r25_update_room_info($space_id = NULL) {
         else {
           $photo_id = NULL;
         }
+*/
+      watchdog('stanford_r25','manually save photo id: '.$photo_id);
       }
+
       $room_info['photo_id'] = $photo_id;
       //$room_info['photo_id'] = $results['vals'][$results['index']['R25:LAYOUT_PHOTO_ID'][0]]['attributes']['XL:HREF'];
     }

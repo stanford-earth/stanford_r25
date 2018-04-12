@@ -164,7 +164,7 @@ function _stanford_r25_feed($get_room_id = NULL) {
         if (!empty($item['scheduled_by'])) {
           $items[$key]['tip'] .= '<br />' . $item['scheduled_by'];
         }
-        drupal_alter('stanford_r25_contact', $items[$key]['tip']);
+        //drupal_alter('stanford_r25_contact', $items[$key]['tip']);
         $can_cancel = FALSE;
         if ($approver) {
           $can_cancel = TRUE;

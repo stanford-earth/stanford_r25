@@ -564,7 +564,24 @@ function _stanford_r25_api_call($command = NULL, $url = NULL, $credential = NULL
   // use drupal_http_request to make the request
   $options['method'] = $method;
   $options['headers'] = array('Content-Type' => 'text/xml; charset=UTF-8');
+
+  // replaced on 2018-01-17 by ksharp to a call to a proxy on sesincub
   $output = drupal_http_request($url, $options);
+/*
+  $query_array = explode('?',$url);
+  $data_str = 'r25='.$query_array[0];
+  if (isset($query_array[1])) {
+    $data_str .= '&'.$query_array[1];
+  }
+  if ($method == 'PUT' || $method == 'POST') {
+    $data_str .= '&post='.$post_data;
+  }
+  $options['data'] = $data_str;
+  $proxy_output = drupal_http_request('https://sesincub.stanford.edu/d7_cap_proxy/return_r25_json', $options);
+  $output = json_decode($proxy_output->data, false);
+*/
+  // end proxy replacement
+
   $result = FALSE;
 
   // if the http request returns an error, report it
@@ -577,6 +594,7 @@ function _stanford_r25_api_call($command = NULL, $url = NULL, $credential = NULL
   }
   else {
     if ($command == 'roomphoto') {
+      if (empty($output)) watchdog('debug','output is empty!');
       // if getting a room photo, $output->data will contain JPEG data instead of XML
       $result = $output->data;
     }
